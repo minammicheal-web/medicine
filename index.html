@@ -91,7 +91,7 @@ textarea{min-height:140px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace}
 #modal{position:fixed;inset:0;z-index:20;background:rgba(2,6,23,.55);display:none;align-items:flex-end;justify-content:center}
 #modal.show{display:flex}
 #sheet{background:var(--card);width:100%;max-width:620px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
-#toast{position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;background:var(--toast-bg);color:var(--toast-fg);
+#toast{position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;background:var(--toast-bg);color:var(--toast-fg);
   padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
 #toast.show{opacity:1}
 .prev{background:var(--bg);border-radius:12px;padding:10px 12px;margin-top:14px;font-size:14px}
@@ -210,6 +210,40 @@ a.link{text-decoration:none;display:inline-block}
 .dn.in{font-size:13px;color:var(--muted);width:34px;height:34px;margin:-17px 0 0 -17px}
 .dn.sel{color:var(--on-accent);font-weight:700}
 .ms-b .ms-ic{flex:none;color:var(--muted);display:grid}
+/* collapsible medicine cards */
+.course{padding:0;overflow:hidden}
+.chead{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--text);font:inherit;text-align:left;padding:18px 14px 18px 16px;cursor:pointer}
+.chead b{flex:1;font-size:18px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chead .ms-ar{transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.course.open .chead .ms-ar{transform:rotate(180deg);color:var(--accent)}
+.cbody{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s cubic-bezier(.2,.8,.2,1)}
+.course.open .cbody{grid-template-rows:1fr}
+.cin{overflow:hidden;min-height:0;padding:0 16px;opacity:0;transition:opacity .25s,padding .32s}
+.course.open .cin{opacity:1;padding:0 16px 16px}
+.cinfo{border-radius:12px;padding:10px 12px;margin:0 -12px;cursor:pointer}
+.cinfo:active{background:var(--soft)}
+.cst{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.seeall{color:var(--accent);font-weight:700;font-size:14px;margin-top:8px}
+/* doses popup */
+#dp{position:fixed;inset:0;z-index:45;background:rgba(2,6,23,.55);display:flex;align-items:center;justify-content:center;padding:16px;animation:pkF .15s ease-out}
+.dpd{background:var(--card);color:var(--text);border-radius:28px;width:min(440px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.45),0 8px 20px rgba(0,0,0,.3);animation:pkIn .2s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.dph{display:flex;align-items:flex-start;gap:8px;padding:20px 14px 12px 22px;border-bottom:1px solid var(--line)}
+.dph div{flex:1;min-width:0}.dph b{display:block;font-size:20px}.dph small{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.dpl{overflow-y:auto;padding:0 14px 8px;flex:1;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:contain}
+.dday{position:sticky;top:0;background:var(--card);z-index:1;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:14px 8px 6px}
+.drow{display:flex;align-items:center;gap:12px;padding:11px 8px;border-radius:12px;cursor:pointer;transition:background .15s}
+.drow:active{background:var(--soft)}
+.drow.on,.drow.open{background:var(--soft)}
+.drow .tm{font-weight:800;min-width:52px;font-variant-numeric:tabular-nums}
+.drow .what{flex:1;color:var(--muted);font-size:14px}
+.dck{width:24px;height:24px;border-radius:50%;border:2px solid var(--outline);display:grid;place-items:center;flex:none;animation:pkIn .15s}
+.drow.on .dck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.dck svg{width:16px;height:16px}
+.dact{display:flex;gap:8px;padding:6px 8px 10px;animation:msIn .14s ease-out}
+.dact .btn{flex:1;padding:10px}
+.dpf{border-top:1px solid var(--line);padding:12px 16px 16px}
+.dpsel{display:flex;align-items:center;gap:4px}.dpsel span{flex:1}
+.dpf .btns{margin-top:6px}.dpf .btn{padding:11px 8px}
 </style>
 </head>
 <body>
@@ -443,19 +477,26 @@ function vHome(){
   return h;
 }
 
+const openCards=new Set();
+function toggleCourse(card,id){
+  if(!card)return;const on=!openCards.has(id);
+  if(on)openCards.add(id);else openCards.delete(id);
+  card.classList.toggle('open',on);
+}
 function courseCard(c){
-  const i=info(c),pct=i.total?Math.round(i.taken/i.total*100):0;
+  const i=info(c),pct=i.total?Math.round(i.taken/i.total*100):0,open=openCards.has(c.id);
   const st=i.state==='finished'?tag('ok','Finished'):i.state==='upcoming'?tag('info','Starts '+dayWord(i.first)):tag('info','Active');
-  let h='<section class="card course"><h3><b>'+esc(c.name)+'</b>'+st+'</h3>'+
-    '<div class="muted small">'+esc(amountText(c.amount,c.unit))+' '+esc(everyText(c.every,c.everyU))+' for '+esc(tUnit(num(c.dur),c.durU))+who(c)+'</div>'+
+  return '<section class="card course'+(open?' open':'')+'"><button class="chead" data-a="toggle" data-id="'+c.id+'"><b>'+esc(c.name)+'</b>'+(multi()&&S.active==='all'?'<span class="muted small">'+esc(profile(c.pid).name)+'</span>':'')+ARROW+'</button>'+
+    '<div class="cbody"><div class="cin"><div class="cinfo" data-a="sched" data-id="'+c.id+'" role="button">'+
+    '<div class="cst">'+st+'<span class="muted small">'+esc(amountText(c.amount,c.unit))+' '+esc(everyText(c.every,c.everyU))+' for '+esc(tUnit(num(c.dur),c.durU))+'</span></div>'+
     '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
     '<div class="line small"><span class="muted">Doses taken</span><b>'+i.taken+' / '+i.total+(i.missed?' · <span style="color:var(--danger-fg)">'+i.missed+' missed</span>':'')+'</b></div>'+
     '<div class="line small"><span class="muted">First dose</span><b>'+dt(i.first)+'</b></div>'+
     '<div class="line small"><span class="muted">Last dose (course ends)</span><b>'+dt(i.last)+'</b></div>'+
     (i.next&&i.state!=='finished'?'<div class="line small"><span class="muted">Next dose</span><b>'+dayWord(i.next)+' '+hm(new Date(i.next))+'</b></div>':'')+
     (c.notes?'<div class="prev">'+esc(c.notes)+'</div>':'')+
-    '<div class="btns"><button class="btn ghost" data-a="edit" data-id="'+c.id+'">Edit</button><button class="btn ghost" data-a="sched" data-id="'+c.id+'">Doses</button><button class="btn danger" data-a="clear" data-id="'+c.id+'">Clear</button></div></section>';
-  return h;
+    '<div class="seeall">See all doses ›</div></div>'+
+    '<div class="btns"><button class="btn ghost" data-a="edit" data-id="'+c.id+'">Edit</button><button class="btn danger" data-a="clear" data-id="'+c.id+'">Clear</button></div></div></div></section>';
 }
 function vMeds(){
   const list=S.courses.filter(inFilter);
@@ -850,14 +891,83 @@ function doseSheet(id,t){
     '<div class="btns"><button class="btn ghost" data-a="mark" data-s="skipped" data-id="'+c.id+'" data-t="'+t+'">Skipped</button><button class="btn" data-a="mark" data-s="taken" data-id="'+c.id+'" data-t="'+t+'">✓ Taken</button></div>'+
     (l?'<div class="center" style="margin-top:8px"><button class="link" data-a="mark" data-s="" data-id="'+c.id+'" data-t="'+t+'">Remove the mark</button></div>':''));
 }
-function schedSheet(id){
+/* ================= doses popup (stays open, long-press to select many) ================= */
+let DP=null;
+function openDoses(id){
   const c=S.courses.find(x=>x.id===id);if(!c)return;
-  const ds=doses(c);let day='';
-  openModal('<h3>'+esc(c.name)+' — all doses</h3><div class="muted small">'+ds.length+' doses · tap one to mark it</div><div style="margin-top:8px">'+ds.map(t=>{
-    const d=ymd(new Date(t));let h='';if(d!==day){day=d;h='<h4 style="margin:14px 0 2px">'+esc(dayWord(t))+'</h4>'}
-    return h+doseRow(c,t);
-  }).join('')+'</div><button class="btn ghost full" style="margin-top:14px" data-a="close">Close</button>');
+  DP={id:id,open:null,sel:null};
+  const e=document.createElement('div');e.id='dp';
+  e.innerHTML='<div class="dpd" role="dialog"><div class="dph"><div><b>'+esc(c.name)+'</b><small id="dpsub"></small></div><button class="dd-x" data-dp="close" aria-label="Close">×</button></div><div class="dpl" id="dpl"></div><div class="dpf" id="dpf"></div></div>';
+  document.body.appendChild(e);
+  e.addEventListener('click',ev=>{if(ev.target===e)history.back()});
+  try{history.pushState({dp:1},'')}catch(x){}
+  drawDoses();
+  const l=$('#dpl'),f=l.querySelector('.drow[data-st=missed],.drow[data-st=due],.drow[data-st=upcoming]');
+  if(f)l.scrollTop=Math.max(0,f.offsetTop-l.clientHeight/3);
+  bindLongPress(l);
 }
+function closeDoses(){const e=$('#dp');if(e)e.remove();DP=null;render()}
+function drawDoses(){
+  const c=S.courses.find(x=>x.id===DP.id),l=$('#dpl');if(!c||!l){closeDoses();return}
+  const i=info(c),selMode=!!DP.sel,top=l.scrollTop;
+  $('#dpsub').textContent=amountText(c.amount,c.unit)+' · '+i.taken+' of '+i.total+' taken'+(i.missed?' · '+i.missed+' missed':'');
+  let h='',day='';
+  i.ds.forEach(t=>{
+    const d=ymd(new Date(t)),s=status(c,t),on=selMode&&DP.sel.has(t);
+    if(d!==day){day=d;h+='<div class="dday">'+esc(dayWord(t))+'</div>'}
+    h+='<div class="drow'+(on?' on':'')+(DP.open===t&&!selMode?' open':'')+'" data-t="'+t+'" data-st="'+s+'">'+
+      (selMode?'<span class="dck">'+(on?CHECK:'')+'</span>':'')+
+      '<span class="tm">'+hm(new Date(t))+'</span><span class="what">'+esc(amountText(c.amount,c.unit))+'</span>'+stTag(s)+'</div>';
+    if(DP.open===t&&!selMode){
+      const l2=c.log&&c.log[t];
+      h+='<div class="dact"><button class="btn" data-dp="taken" data-t="'+t+'">✓ Taken</button><button class="btn ghost" data-dp="skipped" data-t="'+t+'">Skipped</button>'+(l2?'<button class="btn ghost" data-dp="unmark" data-t="'+t+'">Clear</button>':'')+'</div>';
+    }
+  });
+  l.innerHTML=h;l.scrollTop=top;
+  const f=$('#dpf');
+  if(selMode){
+    const n=DP.sel.size;
+    f.innerHTML='<div class="dpsel"><span><b>'+n+'</b> selected</span><button class="link" data-dp="allmissed">Select all missed</button><button class="link" data-dp="cancelsel">Cancel</button></div>'+
+      '<div class="btns" style="margin-top:6px"><button class="btn" data-dp="bulk" data-s="taken"'+(n?'':' disabled')+'>✓ Taken</button><button class="btn ghost" data-dp="bulk" data-s="skipped"'+(n?'':' disabled')+'>Skipped</button><button class="btn ghost" data-dp="bulk" data-s=""'+(n?'':' disabled')+'>Clear</button></div>';
+  }else f.innerHTML='<div class="muted small center">Tap a dose to mark it · hold to select several</div>';
+}
+function setMarks(ts,s){
+  const c=S.courses.find(x=>x.id===DP.id);if(!c)return;
+  c.log=c.log||{};const now=Date.now();
+  ts.forEach(t=>{if(s)c.log[t]={s:s,at:now};else delete c.log[t]});
+  save();
+}
+function bindLongPress(l){
+  let timer=null,sx=0,sy=0;
+  l.addEventListener('pointerdown',ev=>{
+    const r=ev.target.closest('.drow');if(!r||DP.sel)return;
+    sx=ev.clientX;sy=ev.clientY;
+    timer=setTimeout(()=>{timer=null;DP.sel=new Set([+r.dataset.t]);DP.open=null;DP.lp=Date.now();try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}drawDoses()},480);
+  });
+  const stop=()=>{if(timer){clearTimeout(timer);timer=null}};
+  l.addEventListener('pointermove',ev=>{if(timer&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>10)stop()});
+  l.addEventListener('pointerup',()=>{stop();if(DP&&DP.lp){DP.lpUp=Date.now();DP.lp=0}});l.addEventListener('pointercancel',stop);l.addEventListener('scroll',stop);
+  l.addEventListener('contextmenu',ev=>ev.preventDefault());
+}
+document.addEventListener('click',ev=>{
+  if(!DP||!ev.target.closest('#dp'))return;
+  if(DP.lpUp&&Date.now()-DP.lpUp<350){DP.lpUp=0;return}  /* the click that ends a long press */
+  const b=ev.target.closest('[data-dp]');
+  if(b){
+    const k=b.dataset.dp,t=+b.dataset.t;
+    if(k==='close'){history.back();return}
+    if(k==='taken'||k==='skipped'||k==='unmark'){setMarks([t],k==='unmark'?'':k);DP.open=null;drawDoses();if(k==='taken')toast('✓ Marked taken');return}
+    if(k==='cancelsel'){DP.sel=null;drawDoses();return}
+    if(k==='allmissed'){const c=S.courses.find(x=>x.id===DP.id);doses(c).forEach(x=>{const s=status(c,x);if(s==='missed'||s==='due')DP.sel.add(x)});drawDoses();return}
+    if(k==='bulk'){const n=DP.sel.size;if(!n)return;setMarks([...DP.sel],b.dataset.s);DP.sel=null;drawDoses();toast(n+' dose'+(n===1?'':'s')+' '+(b.dataset.s==='taken'?'marked taken':b.dataset.s==='skipped'?'marked skipped':'cleared'));return}
+    return;
+  }
+  const r=ev.target.closest('.drow');if(!r)return;
+  const t=+r.dataset.t;
+  if(DP.sel){if(DP.sel.has(t))DP.sel.delete(t);else DP.sel.add(t);drawDoses();return}
+  DP.open=DP.open===t?null:t;drawDoses();
+});
+
 function personSheet(id){
   const p=id?profile(id):{id:'',name:''};
   const icons=['👤','👨','👩','👦','👧','👴','👵','👶'];
@@ -977,6 +1087,7 @@ async function clearCourse(id){
   render();toast('Cleared');
 }
 document.addEventListener('click',async ev=>{
+  if(ev.target.closest('#dp,#pk'))return;
   if(view==='edit'&&!ev.target.closest('.namewrap'))hideNameDropdowns();
   const g=ev.target.closest('[data-go]');if(g){go(g.dataset.go);return}
   if(ev.target.closest('#back')){history.length>1?history.back():goBack();return}
@@ -994,7 +1105,8 @@ document.addEventListener('click',async ev=>{
     case 'who':S.active=id;save();render();break;
     case 'add':openAdd();break;
     case 'edit':openEdit(id);break;
-    case 'sched':schedSheet(id);break;
+    case 'sched':openDoses(id);break;
+    case 'toggle':toggleCourse(t.closest('.course'),id);break;
     case 'dose':doseSheet(id,+t.dataset.t);break;
     case 'mark':mark(id,+t.dataset.t,t.dataset.s);break;
     case 'clear':clearCourse(id);break;
@@ -1051,12 +1163,13 @@ document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.dataset.flag){S.settings[t.dataset.flag]=t.checked;save();if(t.dataset.flag==='remindOn'&&t.checked)syncNative()}
 });
-window.addEventListener('popstate',()=>{closeMs();if($('#pk')){closePicker();return}if($('#modal').classList.contains('show')){closeModal();return}if(view==='edit'||view==='settings'){goBack()}else if(view!=='home'){view='home';render()}});
+window.addEventListener('popstate',()=>{closeMs();if($('#pk')){closePicker();return}if($('#dp')){closeDoses();return}if($('#modal').classList.contains('show')){closeModal();return}if(view==='edit'||view==='settings'){goBack()}else if(view!=='home'){view='home';render()}});
 window.addEventListener('resize',closeMs);
 document.addEventListener('scroll',ev=>{const t=ev.target;if(t&&t.id==='msmenu')return;closeMs()},true);
 function resume(){
   const ch=refreshData();
   syncNative();
+  if(DP){if(ch)drawDoses();return}
   if(view!=='edit'&&!$('#modal').classList.contains('show')&&(ch||view==='home'))render();
 }
 window.onAppResume=resume;
@@ -1075,7 +1188,7 @@ document.addEventListener('pointerdown',ev=>{
 /* ---- swipe the screen left/right to move between tabs ---- */
 (function(){
   let sx=0,sy=0,mode=0,on=false;const el=()=>$('#view');
-  const blocked=t=>!!$('#pk')||$('#modal').classList.contains('show')||$('#msmenu')||t.closest('input,textarea,select,.ms,#top,.chips');
+  const blocked=t=>!!$('#pk')||!!$('#dp')||$('#modal').classList.contains('show')||$('#msmenu')||t.closest('input,textarea,select,.ms,#top,.chips');
   document.addEventListener('touchstart',ev=>{
     on=false;mode=0;if(ev.touches.length!==1||tabIdx(view)<0||blocked(ev.target))return;
     sx=ev.touches[0].clientX;sy=ev.touches[0].clientY;on=true;el().classList.remove('snap');
