@@ -137,10 +137,11 @@ main .ms-l{background:var(--bg)}
 .dose .what{flex:1;min-width:0}.dose .what b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dose .what span{font-size:13px;color:var(--muted)}
 .course h3{display:flex;align-items:center;gap:8px;margin-bottom:4px}.course h3 b{flex:1}
-.sugs{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:4px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.sugs{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25),0 6px 16px 2px rgba(0,0,0,.14)}
+.sugs .dd-h{padding:10px 14px}
 .sugs:empty{display:none}
-.sugs button{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:inherit;text-align:left;padding:11px 12px;cursor:pointer}
-.sugs button:first-child{border-top:0}.sugs button small{display:block;color:var(--muted);font-size:12px}
+.sugs button.mi{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:inherit;text-align:left;padding:11px 12px;cursor:pointer}
+.sugs .dd-h+button{border-top:0}.sugs button small{display:block;color:var(--muted);font-size:12px}
 .namerow{display:flex;gap:8px;align-items:flex-end}.namerow label{flex:1}
 .namerow .btn{flex:none;padding:12px 14px;margin-bottom:1px}
 .unitrow{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;align-items:end}
@@ -154,6 +155,61 @@ main .ms-l{background:var(--bg)}
 .prod.on{border-color:var(--accent);background:var(--soft)}
 .prev b{color:var(--accent)}
 a.link{text-decoration:none;display:inline-block}
+.namewrap{position:relative}
+.dd{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25),0 6px 16px 2px rgba(0,0,0,.14);animation:msIn .14s ease-out}
+.dd-h{display:flex;align-items:center;gap:8px;padding:10px 6px 10px 14px;border-bottom:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted)}
+.dd-h span{flex:1}
+.dd-x{border:0;background:none;color:var(--muted);font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer}
+.dd-x:active{background:var(--soft)}
+.dd .mi{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:inherit;text-align:left;padding:12px 14px;cursor:pointer}
+.dd .mi:first-of-type{border-top:0}
+.dd .mi:active{background:var(--soft)}
+.dd .mi.sel{background:var(--soft)}
+.dd .mi b{display:block}.dd .mi small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.dd .mi small.ok{color:var(--accent);font-weight:700}
+.dd .det{padding:4px 14px 14px;background:var(--soft);font-size:14px}
+.dd .det pre{white-space:pre-wrap;font:13px/1.45 system-ui,sans-serif;margin:8px 0 0;max-height:200px;overflow:auto;color:var(--text)}
+.dd .det .sug{background:var(--card);color:var(--accent);border-radius:10px;padding:10px 12px;font-weight:700;margin-top:8px}
+.dd .msg{padding:14px;font-size:14px}
+.dd .src{font-size:12px;color:var(--muted);padding:8px 14px 2px}
+.dd .links{padding:0 8px 6px}
+/* ---- Material 3 date & time pickers ---- */
+#pk{position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.55);display:flex;align-items:center;justify-content:center;animation:pkF .15s ease-out}
+@keyframes pkF{from{opacity:0}to{opacity:1}}
+@keyframes pkIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.pkd{background:var(--card);color:var(--text);border-radius:28px;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 10px 34px rgba(0,0,0,.35);animation:pkIn .18s cubic-bezier(.2,.8,.2,1)}
+.pkh{padding:20px 24px 14px;border-bottom:1px solid var(--line)}
+.pkh small{display:block;font-size:13px;font-weight:600;color:var(--muted)}
+.pkh .big{font-size:30px;font-weight:600;letter-spacing:-.3px;margin-top:22px}
+.pknav{display:flex;align-items:center;padding:10px 12px 2px 16px}
+.pkm{flex:1;display:inline-flex;align-items:center;gap:2px;border:0;background:none;color:var(--text);font:inherit;font-size:15px;font-weight:700;padding:8px;border-radius:20px;cursor:pointer;text-align:left}
+.pkm svg{color:var(--muted);transition:transform .2s}.pkm.open svg{transform:rotate(180deg)}
+.pki{width:44px;height:44px;border:0;background:none;color:var(--muted);border-radius:50%;cursor:pointer;display:grid;place-items:center}
+.pki:active,.pkm:active{background:var(--soft)}
+.pkg{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 12px 4px;text-align:center}
+.pkg .wd{font-size:13px;font-weight:600;color:var(--muted);height:40px;line-height:40px}
+.day{width:40px;height:40px;border-radius:50%;border:1px solid transparent;background:none;color:var(--text);font:inherit;font-size:15px;margin:2px auto;cursor:pointer;padding:0}
+.day:active{background:var(--soft)}
+.day.today{border-color:var(--accent);color:var(--accent)}
+.day.sel{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+.pky{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 16px;max-height:300px;overflow:auto}
+.pky button{height:40px;border:0;border-radius:20px;background:none;color:var(--text);font:inherit;font-size:15px;cursor:pointer}
+.pky button.sel{background:var(--accent);color:var(--on-accent);font-weight:700}
+.pky button.cur:not(.sel){outline:1px solid var(--accent);color:var(--accent)}
+.pkb{display:flex;justify-content:flex-end;gap:4px;padding:8px 12px 14px}
+.pkb button{border:0;background:none;color:var(--accent);font:inherit;font-size:15px;font-weight:700;padding:10px 14px;border-radius:20px;cursor:pointer}
+.pkb button:active{background:var(--soft)}
+.pkb .sp{flex:1}
+.tdisp{display:flex;align-items:center;justify-content:center;gap:6px;padding:20px 24px 4px}
+.tbox{width:96px;height:80px;border-radius:10px;border:0;background:var(--line);color:var(--text);font:inherit;font-size:50px;font-weight:500;font-variant-numeric:tabular-nums;cursor:pointer;padding:0}
+.tbox.on{background:var(--soft);color:var(--accent)}
+.tcol{font-size:50px;font-weight:500;width:20px;text-align:center}
+.dial{position:relative;width:256px;height:256px;border-radius:50%;background:var(--line);margin:20px auto 8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.dial svg{position:absolute;inset:0;pointer-events:none}
+.dn{position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;display:grid;place-items:center;font-size:16px;pointer-events:none;color:var(--text)}
+.dn.in{font-size:13px;color:var(--muted);width:34px;height:34px;margin:-17px 0 0 -17px}
+.dn.sel{color:var(--on-accent);font-weight:700}
+.ms-b .ms-ic{flex:none;color:var(--muted);display:grid}
 </style>
 </head>
 <body>
@@ -497,19 +553,21 @@ function libMatches(q){
 }
 function sugsHtml(){
   if(!draft||draft.id)return '';
-  const q=draft.name.trim().toLowerCase(),m=libMatches(q).filter(x=>x.name.toLowerCase()!==q||true);
+  const q=draft.name.trim().toLowerCase();
+  if(!q||(lk&&!lk.hidden))return '';
+  const m=libMatches(q);
   if(!m.length||(m.length===1&&m[0].name.toLowerCase()===q&&draft.fromLib))return '';
-  return m.map(x=>'<button type="button" data-a="uselib" data-id="'+esc(x.name.toLowerCase())+'">'+esc(x.name)+'<small>'+esc(amountText(x.amount,x.unit)+' '+everyText(x.every,x.everyU)+' for '+tUnit(num(x.dur),x.durU))+'</small></button>').join('');
+  return '<div class="dd-h"><span>Saved medicines</span></div>'+m.map(x=>'<button type="button" class="mi" data-a="uselib" data-id="'+esc(x.name.toLowerCase())+'">'+esc(x.name)+'<small>'+esc(amountText(x.amount,x.unit)+' '+everyText(x.every,x.everyU)+' for '+tUnit(num(x.dur),x.durU))+'</small></button>').join('');
 }
 function vEdit(){
   if(!draft)draft=newDraft();
   const d=draft;
   let h='<section class="card">';
   if(multi())h+=msel('f-pid','For',S.profiles.map(p=>[p.id,p.name]),d.pid);
-  h+='<div class="namerow"><label>Medicine name<input id="f-name" data-f="name" value="'+esc(d.name)+'" placeholder="e.g. Panadol, Augmentin" autocomplete="off" autocapitalize="words"></label><button class="btn ghost" data-a="lookup" title="Find the dose online">🔎 Dose</button></div>'+
-    '<div class="sugs" id="sugs">'+sugsHtml()+'</div><div id="lookup">'+lookupHtml()+'</div></section>';
+  h+='<div class="namewrap"><div class="namerow"><label>Medicine name<input id="f-name" data-f="name" value="'+esc(d.name)+'" placeholder="e.g. Panadol, Augmentin" autocomplete="off" autocapitalize="words"></label><button class="btn ghost" data-a="lookup" title="Find the dose online">🔎 Dose</button></div>'+
+    '<div class="sugs" id="sugs">'+sugsHtml()+'</div><div id="lookup">'+lookupHtml()+'</div></div></section>';
   h+='<section class="card"><h4>Each dose</h4><div class="unitrow"><label style="margin:0">Amount<input type="number" inputmode="decimal" step="0.25" min="0" data-f="amount" value="'+esc(d.amount)+'"></label>'+msel('f-unit','Unit',DOSE_UNITS,d.unit)+'</div>'+
-    '<h4 style="margin-top:18px">First dose</h4><div class="two"><label style="margin:0">Date<input type="date" data-f="date" value="'+esc(d.date)+'"></label><label style="margin:0">Time<input type="time" data-f="time" value="'+esc(d.time)+'"></label></div>'+
+    '<h4 style="margin-top:18px">First dose</h4><div class="two">'+pickField('pickdate','Date',fmtPickDate(d.date),CAL_IC)+pickField('picktime','Time',d.time,CLOCK_IC)+'</div>'+
     '<h4 style="margin-top:18px">Repeat every</h4><div class="unitrow"><label style="margin:0">Every<input type="number" inputmode="decimal" step="1" min="0" data-f="every" value="'+esc(d.every)+'"></label>'+msel('f-everyU','Time unit',EVERY_UNITS,d.everyU)+'</div>'+
     '<h4 style="margin-top:18px">For how long</h4><div class="unitrow"><label style="margin:0">Duration<input type="number" inputmode="decimal" step="1" min="0" data-f="dur" value="'+esc(d.dur)+'"></label>'+msel('f-durU','Time unit',DUR_UNITS,d.durU)+'</div>'+
     '<div class="prev" id="preview">'+previewHtml()+'</div>'+
@@ -547,7 +605,7 @@ const ALIAS={paracetamol:'acetaminophen',panadol:'acetaminophen',adol:'acetamino
   zantac:'ranitidine',mucosolvan:'ambroxol',strepsils:'amylmetacresol',otrivin:'xylometazoline',daflon:'diosmin',neurontin:'gabapentin',lyrica:'pregabalin',eltroxin:'levothyroxine',
   euthyrox:'levothyroxine',coversyl:'perindopril',diovan:'valsartan',tritace:'ramipril',januvia:'sitagliptin',amaryl:'glimepiride',flumox:'amoxicillin and flucloxacillin',
   ceftriaxone:'ceftriaxone',xorox:'cefuroxime',zinnat:'cefuroxime',zinacef:'cefuroxime',omez:'omeprazole',gaviscon:'sodium alginate',vitacid:'ascorbic acid',deltasone:'prednisone',
-  solupred:'prednisolone',predsol:'prednisolone',medrol:'methylprednisolone',dexamethasone:'dexamethasone',decadron:'dexamethasone'};
+  solupred:'prednisolone',clomid:'clomiphene',clomiphene:'clomiphene',duphaston:'dydrogesterone',cyclogest:'progesterone',prontogest:'progesterone',utrogestan:'progesterone',fostimon:'urofollitropin',predsol:'prednisolone',medrol:'methylprednisolone',dexamethasone:'dexamethasone',decadron:'dexamethasone'};
 const pending={};
 window.onNetText=(id,ok,text)=>{const p=pending[id];if(p){delete pending[id];p({ok:ok,text:text})}};
 function net(url){
@@ -560,7 +618,7 @@ const UNIT_MAP=[[/^tab|^caplet/,'tablet'],[/^cap|^softgel/,'capsule'],[/^teaspoo
 function parseDose(text){
   const t=String(text||'').replace(/\s+/g,' ');
   let i=t.search(/\badults?\b/i);if(i<0)i=0;
-  const seg=t.slice(i,i+900),out={};
+  const seg=t.slice(i,i+2500),out={};
   const am=seg.match(/\b(\d+(?:\.\d+)?|one-half|one|two|three|four|five|six|half|½|1\/2)\s*(?:\(\s*\d+\s*\)\s*)?(?:\d+(?:\.\d+)?\s*-?\s*(?:mg|mcg|g)\s+)?(?:(?:to|or|-)\s*(?:\d+(?:\.\d+)?|two|three|four)\s*)?(tablets?|caplets?|capsules?|softgels?|teaspoonfuls?|teaspoons?|tablespoonfuls?|tablespoons?|tsp|tbsp|mL|ml|drops?|puffs?|inhalations?|sachets?|packets?|suppositor(?:y|ies)|sprays?|patch(?:es)?|lozenges?|units?|mg)\b/i);
   if(am){const n=WORDNUM[am[1].toLowerCase()]||num(am[1]);const u=am[2].toLowerCase();const m=UNIT_MAP.find(x=>x[0].test(u));if(n>0&&m){out.amount=n;out.unit=m[1]}}
   const ev=seg.match(/every\s+(\d+(?:\.\d+)?)(?:\s*(?:to|-|or)\s*(\d+(?:\.\d+)?))?\s*(hours?|hrs?|days?|weeks?)/i);
@@ -587,63 +645,201 @@ function sugText(p){
   if(p.dur)parts.push('for '+tUnit(p.dur,p.durU));
   return parts.join(' ');
 }
+function fdaRows(json,key){
+  let res=[];try{res=(JSON.parse(json).results||[])}catch(e){}
+  res=res.map(x=>{
+    const o=x.openfda||{},txt=first(x.dosage_and_administration)||first(x.directions)||'';
+    return {brand:first(o.brand_name),generic:first(o.generic_name),route:first(o.route),text:String(txt).replace(/^\s*(2\s*)?DOSAGE AND ADMINISTRATION\s*/i,'').replace(/^\s*Directions\s*/i,''),p:parseDose(txt)};
+  }).filter(x=>x.text);
+  const seen={};res=res.filter(x=>{const k=(x.brand+'|'+x.generic+'|'+x.route).toLowerCase();if(seen[k])return false;seen[k]=1;return true});
+  const score=x=>(x.route==='ORAL'?4:0)+(x.p.amount?2:0)+(x.p.every?3:0)+((x.brand||'').toLowerCase()===key?3:0);
+  return res.sort((a,b)=>score(b)-score(a)).slice(0,6);
+}
+async function fda(term,key){
+  const search=['openfda.brand_name','openfda.generic_name','openfda.substance_name'].map(f=>f+':"'+term+'"').join(' ');
+  const r=await net('https://api.fda.gov/drug/label.json?search='+encodeURIComponent(search)+'&limit=25');
+  return {r:r,res:r.ok?fdaRows(r.text,key):[]};
+}
+/* RxNorm: brand or misspelled name → active ingredient name */
+async function ingredientOf(term){
+  try{
+    const a=await net('https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term='+encodeURIComponent(term)+'&maxEntries=3');
+    const c=((JSON.parse(a.text).approximateGroup||{}).candidate||[]).filter(x=>x.rxcui);
+    for(const k of c.slice(0,2)){
+      const r=await net('https://rxnav.nlm.nih.gov/REST/rxcui/'+k.rxcui+'/related.json?tty=IN+MIN');
+      const g=((JSON.parse(r.text).relatedGroup||{}).conceptGroup||[]);
+      for(const x of g){const p=x.conceptProperties||[];if(p.length)return p[0].name.toLowerCase()}
+    }
+  }catch(e){}
+  return '';
+}
 async function lookup(){
   const q=(draft&&draft.name||'').trim();
   if(!q){toast('Type the medicine name first');return}
+  if(lk&&lk.q===q&&lk.st!=='loading'&&lk.st!=='error'){lk.hidden=false;updLookup();return}
   lk={q:q,st:'loading'};updLookup();
   const key=q.toLowerCase().replace(/\s+\d.*$/,'').trim(),word=key.split(/\s+/)[0];
-  const term=ALIAS[key]||ALIAS[word]||key;
-  const fields=['openfda.brand_name','openfda.generic_name','openfda.substance_name'];
-  const search=fields.map(f=>f+':"'+term+'"').join(' ');
-  const r=await net('https://api.fda.gov/drug/label.json?search='+encodeURIComponent(search)+'&limit=25');
+  let term=ALIAS[key]||ALIAS[word]||key,via='';
+  if(term!==key)via=term;
+  let f=await fda(term,key);
   if(!lk||lk.q!==q)return;
-  let res=[];
-  if(r.ok){try{res=(JSON.parse(r.text).results||[])}catch(e){}}
-  res=res.map(x=>{
-    const o=x.openfda||{},txt=first(x.dosage_and_administration)||first(x.directions)||first(x.dosage_and_administration_table)||'';
-    return {brand:first(o.brand_name),generic:first(o.generic_name),route:first(o.route),form:first(x.dosage_forms_and_strengths)||'',text:String(txt).replace(/^\s*(2\s*)?DOSAGE AND ADMINISTRATION\s*/i,'').replace(/^\s*Directions\s*/i,''),p:parseDose(txt)};
-  }).filter(x=>x.text);
-  /* one entry per product name, the most useful first: oral, with a readable suggestion */
-  const seen={};res=res.filter(x=>{const k=(x.brand+'|'+x.generic+'|'+x.route).toLowerCase();if(seen[k])return false;seen[k]=1;return true});
-  const score=x=>(x.route==='ORAL'?4:0)+(x.p.amount?2:0)+(x.p.every?2:0)+((x.brand||'').toLowerCase()===key?3:0);
-  res.sort((a,b)=>score(b)-score(a));
-  if(res.length){lk={q:q,st:'done',term:term,res:res.slice(0,5),pick:0,more:false};updLookup();return}
-  if(!r.ok&&!r.text){lk={q:q,st:'error'};updLookup();return}
-  /* nothing found: ask RxNorm for spelling suggestions */
+  if(!f.res.length){
+    const ing=await ingredientOf(term);
+    if(!lk||lk.q!==q)return;
+    if(ing&&ing!==term){const g=await fda(ing,key);if(g.res.length){f=g;term=ing;via=ing}}
+  }
+  if(!lk||lk.q!==q)return;
+  if(f.res.length){lk={q:q,st:'done',term:term,via:via,res:f.res,pick:0,more:false};updLookup();return}
+  if(!f.r.ok&&!f.r.text){lk={q:q,st:'error'};updLookup();return}
   const s=await net('https://rxnav.nlm.nih.gov/REST/spellingsuggestions.json?name='+encodeURIComponent(term));
   let sugg=[];try{sugg=((JSON.parse(s.text).suggestionGroup||{}).suggestionList||{}).suggestion||[]}catch(e){}
   if(!lk||lk.q!==q)return;
   lk={q:q,st:'none',term:term,sugg:sugg.filter(x=>x.toLowerCase()!==term).slice(0,5)};updLookup();
 }
 function lookupHtml(){
-  if(!lk)return '';
-  const web='<a class="link" href="https://www.google.com/search?q='+encodeURIComponent(lk.q+' dose')+'">Search the web ↗</a><a class="link" href="https://www.drugs.com/search.php?searchterm='+encodeURIComponent(lk.term||lk.q)+'">Drugs.com ↗</a>';
-  if(lk.st==='loading')return '<div class="lk muted">Looking up '+esc(lk.q)+'…</div>';
-  if(lk.st==='error')return '<div class="lk">Could not reach the medicine database. Check your internet connection and try again.<div>'+web+'</div></div>';
-  if(lk.st==='none')return '<div class="lk"><b>'+esc(lk.q)+'</b> was not found in the database. Try the active ingredient name (on the box, e.g. “paracetamol”).'+
-    (lk.sugg&&lk.sugg.length?'<div style="margin-top:8px">Did you mean: '+lk.sugg.map(x=>'<button class="chip" style="margin:4px 4px 0 0" data-a="trysug" data-id="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>':'')+'<div>'+web+'</div></div>';
-  const x=lk.res[lk.pick],st=sugText(x.p);
-  let h='<div class="lk">';
-  if(lk.res.length>1)h+='<div class="muted small">Pick the product that matches yours:</div>'+lk.res.map((r,i)=>'<button class="prod'+(i===lk.pick?' on':'')+'" data-a="lkpick" data-id="'+i+'"><b>'+esc(r.brand||r.generic)+'</b> <span class="muted small">'+esc([r.generic!==r.brand?r.generic:'',(r.route||'').toLowerCase()].filter(Boolean).join(' · '))+'</span></button>').join('');
-  else h+='<b>'+esc(x.brand||x.generic)+'</b> <span class="muted small">'+esc([x.generic,(x.route||'').toLowerCase()].filter(Boolean).join(' · '))+'</span>';
-  if(lk.term!==lk.q.toLowerCase())h+='<div class="muted small" style="margin-top:6px">Searched for the active ingredient: '+esc(lk.term)+'</div>';
-  if(st)h+='<div class="sug">Suggested for adults: '+esc(st)+'</div><button class="btn full" style="margin-top:8px" data-a="usesug">Use this dose</button>';
-  else h+='<div class="muted small" style="margin-top:8px">No simple dose could be read from the label — read it below and enter the dose yourself.</div>';
-  if(x.p.max)h+='<div class="warnbox">⚠️ '+esc(x.p.max)+'</div>';
-  const full=x.text.length>700&&!lk.more;
-  h+='<pre>'+esc(full?x.text.slice(0,700)+'…':x.text)+'</pre>'+(full?'<button class="link" data-a="lkmore">Read the full directions</button>':'');
-  h+='<div class="src">Source: U.S. FDA drug label (openFDA). General information only — your doctor\'s prescription comes first. You can change any field below.</div><div>'+web+'</div></div>';
+  if(!lk||lk.hidden)return '';
+  const web='<div class="links"><a class="link" href="https://www.google.com/search?q='+encodeURIComponent(lk.q+' dose')+'">Search the web ↗</a><a class="link" href="https://www.drugs.com/search.php?searchterm='+encodeURIComponent(lk.term||lk.q)+'">Drugs.com ↗</a></div>';
+  const head=t=>'<div class="dd-h"><span>'+t+'</span><button class="dd-x" data-a="lkclose" aria-label="Close">×</button></div>';
+  let h='<div class="dd">';
+  if(lk.st==='loading')return h+head('Looking up “'+esc(lk.q)+'”…')+'<div class="msg muted">Searching the medicine database…</div></div>';
+  if(lk.st==='error')return h+head('No connection')+'<div class="msg">Could not reach the medicine database. Check your internet connection and try again.</div>'+web+'</div>';
+  if(lk.st==='none')return h+head('Nothing found for “'+esc(lk.q)+'”')+'<div class="msg">Try the active ingredient written on the box (for example “paracetamol”), or just fill in the dose below yourself.'+
+    (lk.sugg&&lk.sugg.length?'<div style="margin-top:8px">Did you mean: '+lk.sugg.map(x=>'<button class="chip" style="margin:4px 4px 0 0" data-a="trysug" data-id="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>':'')+'</div>'+web+'</div>';
+  h+=head(lk.res.length+' result'+(lk.res.length===1?'':'s')+(lk.via?' · active ingredient: '+esc(lk.via):'')+' — tap to see the dose');
+  lk.res.forEach((x,i)=>{
+    const st=sugText(x.p);
+    h+='<button class="mi'+(i===lk.pick?' sel':'')+'" data-a="lkpick" data-id="'+i+'"><b>'+esc(x.brand||x.generic)+'</b><small>'+esc([x.generic&&x.generic!==x.brand?x.generic:'',(x.route||'').toLowerCase()].filter(Boolean).join(' · '))+'</small>'+
+      (st?'<small class="ok">'+esc(st)+'</small>':'<small>No simple dose found — read the directions</small>')+'</button>';
+    if(i!==lk.pick)return;
+    h+='<div class="det">';
+    if(st)h+='<div class="sug">Suggested for adults: '+esc(st)+'</div><button class="btn full" style="margin-top:8px" data-a="usesug">Use this dose</button>';
+    else h+='<div class="muted small" style="margin-top:8px">The label has no simple dose to copy. Read it below, then enter the dose yourself in the fields underneath.</div>';
+    if(x.p.max)h+='<div class="warnbox">⚠️ '+esc(x.p.max)+'</div>';
+    const cut=x.text.length>700&&!lk.more;
+    h+='<pre>'+esc(cut?x.text.slice(0,700)+'…':x.text)+'</pre>'+(cut?'<button class="link" data-a="lkmore">Read the full directions</button>':'')+'</div>';
+  });
+  h+='<div class="src">Source: U.S. FDA drug labels (openFDA). General information only — your doctor\'s prescription comes first.</div>'+web+'</div>';
   return h;
 }
-function updLookup(){const el=$('#lookup');if(el)el.innerHTML=lookupHtml()}
+function updLookup(){const el=$('#lookup');if(el)el.innerHTML=lookupHtml();const s=$('#sugs');if(s&&lk&&!lk.hidden)s.innerHTML=''}
+function hideNameDropdowns(){const s=$('#sugs');if(s)s.innerHTML='';if(lk&&!lk.hidden){lk.hidden=true;updLookup()}}
 function useSuggestion(){
-  if(!lk||lk.st!=='done'||!draft)return;
-  const p=lk.res[lk.pick].p;
+  if(!lk||lk.st!=='done'||!draft||!lk.res[lk.pick])return;
+  const p=lk.res[lk.pick].p;lk.hidden=true;
   ['amount','every','dur'].forEach(k=>{if(p[k])draft[k]=String(p[k])});
   ['unit','everyU','durU'].forEach(k=>{if(p[k])draft[k]=p[k]});
   render();toast('Dose filled in — check it before saving');
   const pv=$('#preview');if(pv)pv.scrollIntoView({block:'center',behavior:'smooth'});
 }
+
+/* ================= Material 3 date & time pickers ================= */
+const CAL_IC='<span class="ms-ic"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg></span>';
+const CLOCK_IC='<span class="ms-ic"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></span>';
+const CHEV_L='<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
+const CHEV_R='<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
+const pickField=(a,label,val,ic)=>'<div class="ms" style="margin-top:6px"><span class="ms-l">'+esc(label)+'</span><button type="button" class="ms-b" data-a="'+a+'"><span class="ms-v">'+esc(val)+'</span>'+ic+'</button></div>';
+const parseD=s=>{const p=String(s||'').split('-').map(Number);const d=new Date(p[0],p[1]-1,p[2]);return isNaN(d)?new Date():d};
+const fmtPickDate=s=>parseD(s).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let PK=null;
+function closePicker(){const e=$('#pk');if(e)e.remove();PK=null}
+function pkShell(inner){
+  let e=$('#pk');
+  if(!e){e=document.createElement('div');e.id='pk';document.body.appendChild(e);
+    e.addEventListener('click',ev=>{if(ev.target===e)closePicker()});
+    try{history.pushState({pk:1},'')}catch(x){}}
+  e.innerHTML='<div class="pkd" role="dialog">'+inner+'</div>';
+  return e;
+}
+function datePicker(cur,cb){
+  const d=parseD(cur);
+  PK={kind:'date',sel:d,y:d.getFullYear(),m:d.getMonth(),years:false,cb:cb};
+  drawDate();
+}
+function drawDate(){
+  const P=PK,today=ymd(new Date()),sel=ymd(P.sel);
+  let h='<div class="pkh"><small>Select date</small><div class="big">'+esc(P.sel.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}))+'</div></div>';
+  h+='<div class="pknav"><button class="pkm'+(P.years?' open':'')+'" data-pk="years">'+MONTHS[P.m]+' '+P.y+ARROW+'</button>'+
+    (P.years?'':'<button class="pki" data-pk="prev" aria-label="Previous month">'+CHEV_L+'</button><button class="pki" data-pk="next" aria-label="Next month">'+CHEV_R+'</button>')+'</div>';
+  if(P.years){
+    const ny=new Date().getFullYear();let ys='';
+    for(let y=ny-3;y<=ny+5;y++)ys+='<button data-pk="y" data-v="'+y+'" class="'+(y===P.y?'sel ':'')+(y===ny?'cur':'')+'">'+y+'</button>';
+    h+='<div class="pky">'+ys+'</div>';
+  }else{
+    h+='<div class="pkg">'+['M','T','W','T','F','S','S'].map(x=>'<div class="wd">'+x+'</div>').join('');
+    const f=new Date(P.y,P.m,1),lead=(f.getDay()+6)%7,n=new Date(P.y,P.m+1,0).getDate();
+    for(let i=0;i<lead;i++)h+='<div></div>';
+    for(let k=1;k<=n;k++){const s=P.y+'-'+pad(P.m+1)+'-'+pad(k);h+='<button class="day'+(s===sel?' sel':'')+(s===today?' today':'')+'" data-pk="d" data-v="'+s+'">'+k+'</button>'}
+    h+='</div>';
+  }
+  h+='<div class="pkb"><button data-pk="today">Today</button><span class="sp"></span><button data-pk="cancel">Cancel</button><button data-pk="ok">OK</button></div>';
+  pkShell(h);
+}
+function timePicker(cur,cb){
+  const p=/^\d\d:\d\d$/.test(cur||'')?cur.split(':').map(Number):[8,0];
+  PK={kind:'time',h:p[0],m:p[1],mode:'h',cb:cb};
+  drawTime();
+}
+function drawTime(){
+  const P=PK;
+  let h='<div class="pkh" style="border:0;padding-bottom:0"><small>Select time</small></div>'+
+    '<div class="tdisp"><button class="tbox'+(P.mode==='h'?' on':'')+'" data-pk="mh">'+pad(P.h)+'</button><span class="tcol">:</span><button class="tbox'+(P.mode==='m'?' on':'')+'" data-pk="mm">'+pad(P.m)+'</button></div>'+
+    '<div class="dial" id="dial">'+dialInner()+'</div>'+
+    '<div class="pkb"><button data-pk="now">Now</button><span class="sp"></span><button data-pk="cancel">Cancel</button><button data-pk="ok">OK</button></div>';
+  pkShell(h);
+  bindDial();
+}
+const R_OUT=100,R_IN=64,C=128;
+function dialInner(){
+  const P=PK;let nums='',ang,r;
+  const pos=(a,rr)=>[C+rr*Math.sin(a*Math.PI/180),C-rr*Math.cos(a*Math.PI/180)];
+  if(P.mode==='h'){
+    ang=(P.h%12)*30;r=(P.h===0||P.h>12)?R_IN:R_OUT;
+    for(let i=1;i<=12;i++){const q=pos(i*30,R_OUT);nums+='<div class="dn'+(P.h===i?' sel':'')+'" style="left:'+q[0]+'px;top:'+q[1]+'px">'+i+'</div>'}
+    for(let i=0;i<12;i++){const v=i===0?0:i+12,q=pos(i*30,R_IN);nums+='<div class="dn in'+(P.h===v?' sel':'')+'" style="left:'+q[0]+'px;top:'+q[1]+'px">'+pad(v)+'</div>'}
+  }else{
+    ang=P.m*6;r=R_OUT;
+    for(let i=0;i<60;i+=5){const q=pos(i*6,R_OUT);nums+='<div class="dn'+(P.m===i?' sel':'')+'" style="left:'+q[0]+'px;top:'+q[1]+'px">'+pad(i)+'</div>'}
+  }
+  const e=pos(ang,r),big=P.mode==='h'&&r===R_IN?17:20,dot=P.mode==='m'&&P.m%5?'<circle cx="'+e[0]+'" cy="'+e[1]+'" r="3" fill="var(--on-accent)"/>':'';
+  const svg='<svg viewBox="0 0 256 256" width="256" height="256"><circle cx="'+C+'" cy="'+C+'" r="4" fill="var(--accent)"/><line x1="'+C+'" y1="'+C+'" x2="'+e[0]+'" y2="'+e[1]+'" stroke="var(--accent)" stroke-width="2"/><circle cx="'+e[0]+'" cy="'+e[1]+'" r="'+big+'" fill="var(--accent)"/>'+dot+'</svg>';
+  return svg+nums;
+}
+function bindDial(){
+  const d=$('#dial');if(!d)return;let down=false;
+  const pick=ev=>{
+    const b=d.getBoundingClientRect(),x=ev.clientX-b.left-b.width/2,y=ev.clientY-b.top-b.height/2;
+    let a=Math.atan2(x,-y)*180/Math.PI;if(a<0)a+=360;
+    if(PK.mode==='h'){const i=Math.round(a/30)%12,inner=Math.hypot(x,y)<(R_OUT+R_IN)/2*b.width/256;PK.h=inner?(i===0?0:i+12):(i===0?12:i)}
+    else PK.m=Math.round(a/6)%60;
+    d.innerHTML=dialInner();
+    const bx=document.querySelectorAll('.tbox');if(bx.length===2){bx[0].textContent=pad(PK.h);bx[1].textContent=pad(PK.m)}
+  };
+  d.addEventListener('pointerdown',ev=>{down=true;try{d.setPointerCapture(ev.pointerId)}catch(e){}pick(ev)});
+  d.addEventListener('pointermove',ev=>{if(down)pick(ev)});
+  d.addEventListener('pointerup',()=>{if(!down)return;down=false;if(PK&&PK.mode==='h'){PK.mode='m';setTimeout(drawTime,180)}});
+  d.addEventListener('pointercancel',()=>{down=false});
+}
+document.addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-pk]');if(!b||!PK)return;
+  const k=b.dataset.pk,P=PK;
+  if(k==='cancel'){history.back();return}
+  if(P.kind==='date'){
+    if(k==='prev'||k==='next'){const d=new Date(P.y,P.m+(k==='next'?1:-1),1);P.y=d.getFullYear();P.m=d.getMonth()}
+    else if(k==='years')P.years=!P.years;
+    else if(k==='y'){P.y=+b.dataset.v;P.years=false}
+    else if(k==='d')P.sel=parseD(b.dataset.v);
+    else if(k==='today'){P.sel=new Date();P.y=P.sel.getFullYear();P.m=P.sel.getMonth();P.years=false}
+    else if(k==='ok'){const cb=P.cb,v=ymd(P.sel);history.back();setTimeout(()=>cb(v),0);return}
+    drawDate();
+  }else{
+    if(k==='mh')P.mode='h';
+    else if(k==='mm')P.mode='m';
+    else if(k==='now'){const n=new Date();P.h=n.getHours();P.m=n.getMinutes()}
+    else if(k==='ok'){const cb=P.cb,v=pad(P.h)+':'+pad(P.m);history.back();setTimeout(()=>cb(v),0);return}
+    drawTime();
+  }
+});
 
 /* ================= sheets ================= */
 function doseSheet(id,t){
@@ -781,6 +977,7 @@ async function clearCourse(id){
   render();toast('Cleared');
 }
 document.addEventListener('click',async ev=>{
+  if(view==='edit'&&!ev.target.closest('.namewrap'))hideNameDropdowns();
   const g=ev.target.closest('[data-go]');if(g){go(g.dataset.go);return}
   if(ev.target.closest('#back')){history.length>1?history.back():goBack();return}
   if(ev.target.closest('#act')){openAdd();return}
@@ -808,7 +1005,10 @@ document.addEventListener('click',async ev=>{
       closeModal();S.courses=S.courses.filter(c=>f.indexOf(c)<0);save();render();toast('Cleared');break}
     case 'savecourse':saveCourse();break;
     case 'lookup':lookup();break;
-    case 'lkpick':if(lk){lk.pick=+id;lk.more=false;updLookup()}break;
+    case 'lkclose':if(lk){lk.hidden=true;updLookup()}break;
+    case 'pickdate':if(draft)datePicker(draft.date,v=>{draft.date=v;render()});break;
+    case 'picktime':if(draft)timePicker(draft.time,v=>{draft.time=v;render()});break;
+    case 'lkpick':if(lk){lk.pick=lk.pick===+id?-1:+id;lk.more=false;updLookup()}break;
     case 'lkmore':if(lk){lk.more=true;updLookup()}break;
     case 'usesug':useSuggestion();break;
     case 'trysug':if(draft){draft.name=id;const i=$('#f-name');if(i)i.value=id;lookup()}break;
@@ -841,17 +1041,17 @@ document.addEventListener('input',ev=>{
   const t=ev.target;
   if(t.dataset.f&&draft){
     draft[t.dataset.f]=t.value;
-    if(t.dataset.f==='name'){draft.fromLib=false;const s=$('#sugs');if(s)s.innerHTML=sugsHtml()}
+    if(t.dataset.f==='name'){draft.fromLib=false;if(lk){lk=null;updLookup()}const s=$('#sugs');if(s)s.innerHTML=sugsHtml()}
     const p=$('#preview');if(p)p.innerHTML=previewHtml();
   }
 });
 document.addEventListener('focusin',ev=>{if(ev.target.id==='f-name'){const s=$('#sugs');if(s)s.innerHTML=sugsHtml()}});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeMs();if(ev.key==='Enter'&&ev.target.id==='f-name'){ev.preventDefault();ev.target.blur();lookup()}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){closeMs();if($('#pk'))history.back()}if(ev.key==='Enter'&&ev.target.id==='f-name'){ev.preventDefault();ev.target.blur();lookup()}});
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.dataset.flag){S.settings[t.dataset.flag]=t.checked;save();if(t.dataset.flag==='remindOn'&&t.checked)syncNative()}
 });
-window.addEventListener('popstate',()=>{closeMs();if($('#modal').classList.contains('show')){closeModal();return}if(view==='edit'||view==='settings'){goBack()}else if(view!=='home'){view='home';render()}});
+window.addEventListener('popstate',()=>{closeMs();if($('#pk')){closePicker();return}if($('#modal').classList.contains('show')){closeModal();return}if(view==='edit'||view==='settings'){goBack()}else if(view!=='home'){view='home';render()}});
 window.addEventListener('resize',closeMs);
 document.addEventListener('scroll',ev=>{const t=ev.target;if(t&&t.id==='msmenu')return;closeMs()},true);
 function resume(){
@@ -875,7 +1075,7 @@ document.addEventListener('pointerdown',ev=>{
 /* ---- swipe the screen left/right to move between tabs ---- */
 (function(){
   let sx=0,sy=0,mode=0,on=false;const el=()=>$('#view');
-  const blocked=t=>$('#modal').classList.contains('show')||$('#msmenu')||t.closest('input,textarea,select,.ms,#top,.chips');
+  const blocked=t=>!!$('#pk')||$('#modal').classList.contains('show')||$('#msmenu')||t.closest('input,textarea,select,.ms,#top,.chips');
   document.addEventListener('touchstart',ev=>{
     on=false;mode=0;if(ev.touches.length!==1||tabIdx(view)<0||blocked(ev.target))return;
     sx=ev.touches[0].clientX;sy=ev.touches[0].clientY;on=true;el().classList.remove('snap');
