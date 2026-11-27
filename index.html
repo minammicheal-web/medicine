@@ -213,6 +213,12 @@ a.link{text-decoration:none;display:inline-block}
 .fab{position:fixed;right:max(18px,calc(50vw - 292px));bottom:calc(18px + env(safe-area-inset-bottom));z-index:6;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);font:800 17px system-ui,sans-serif;padding:0 24px;min-height:58px;box-shadow:0 10px 22px rgba(15,23,42,.28),0 3px 7px rgba(15,23,42,.18);cursor:pointer;overflow:hidden;transition:transform .15s,opacity .2s}
 .fab:active{transform:scale(.96)}
 .fab.hide{opacity:0;pointer-events:none;transform:scale(.8)}
+.tko{padding:6px 16px 4px;display:grid;gap:10px}
+.tk{position:relative;overflow:hidden;display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:16px;padding:14px 16px;font:inherit;cursor:pointer}
+.tk:active{background:var(--soft);border-color:var(--accent)}
+.tk b{display:block;font-size:16px}.tk small{display:block;color:var(--muted);font-size:13px;margin-top:4px;line-height:1.4}
+.tk[data-pk=shift] b{color:var(--accent)}
+.tk:disabled{opacity:.55}
 :root[data-theme=dark] .fab{box-shadow:0 12px 26px rgba(0,0,0,.6),0 3px 8px rgba(0,0,0,.45)}
 main{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
 /* collapsible medicine cards */
@@ -765,7 +771,10 @@ function doses(c){
   const end=addUnit(s,num(c.dur),c.durU),ev=num(c.every),out=[s];
   if(!(ev>0))return out;
   for(let k=1;k<3000;k++){const t=addUnit(s,ev*k,c.everyU);if(t>=end||t<=out[out.length-1])break;out.push(t)}
-  return out;
+  if(!c.anchors||!c.anchors.length)return out;
+  /* a dose taken late can move every dose after it (same number of doses, same spacing) */
+  const an=c.anchors.slice().sort((a,b)=>a.k-b.k);
+  return out.map((t,k)=>{let a=null;for(const x of an)if(x.k<=k)a=x;return a?addUnit(a.t,ev*(k-a.k),c.everyU):t});
 }
 function info(c){
   const ds=doses(c),now=Date.now(),first=ds[0],last=ds[ds.length-1];
@@ -1063,6 +1072,7 @@ function saveCourse(){
   if(p){toast(p);return}
   const old=draft.id&&S.courses.find(x=>x.id===draft.id);
   if(old){
+    if(old.start!==c.start||old.every!==c.every||old.everyU!==c.everyU||old.dur!==c.dur||old.durU!==c.durU)delete old.anchors;
     Object.assign(old,{pid:c.pid,name:c.name,amount:c.amount,unit:c.unit,start:c.start,every:c.every,everyU:c.everyU,dur:c.dur,durU:c.durU,notes:c.notes});
     const keep={},ds=doses(old);Object.keys(old.log||{}).forEach(k=>{if(ds.indexOf(+k)>=0)keep[k]=old.log[k]});old.log=keep;
   }else{
@@ -1307,6 +1317,7 @@ document.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-pk]');if(!b||!PK)return;
   const k=b.dataset.pk,P=PK;
   if(k==='cancel'){history.back();return}
+  if(P.kind==='take'){takeChoice(k);return}
   if(P.kind==='date'){
     if(k==='prev'||k==='next'){const d=new Date(P.y,P.m+(k==='next'?1:-1),1);P.y=d.getFullYear();P.m=d.getMonth()}
     else if(k==='years')P.years=!P.years;
@@ -1333,6 +1344,55 @@ function doseSheet(id,t){
     '<div class="btns"><button class="btn ghost" data-a="mark" data-s="skipped" data-id="'+c.id+'" data-t="'+t+'">Skipped</button><button class="btn" data-a="mark" data-s="taken" data-id="'+c.id+'" data-t="'+t+'">✓ Taken</button></div>'+
     (l?'<div class="center" style="margin-top:8px"><button class="link" data-a="mark" data-s="" data-id="'+c.id+'" data-t="'+t+'">Remove the mark</button></div>':''));
 }
+/* ================= taken late: keep the schedule, or move the next doses ================= */
+function shiftFrom(c,t,at){
+  const old=doses(c),k=old.indexOf(t);if(k<0)return false;
+  c.anchors=(c.anchors||[]).filter(a=>a.k<k);c.anchors.push({k:k,t:at});
+  const nw=doses(c),log={};
+  Object.keys(c.log||{}).forEach(key=>{const i=old.indexOf(+key);if(i>=k&&nw[i]!=null)log[nw[i]]=c.log[key];else log[key]=c.log[key]});
+  log[nw[k]]={s:'taken',at:Date.now()};
+  c.log=log;return true;
+}
+function takeDose(id,t,after){
+  const c=S.courses.find(x=>x.id===id);if(!c)return;
+  const ds=doses(c),k=ds.indexOf(t),now=Date.now();
+  if(k<0||now-t<10*60000||k>=ds.length-1){c.log=c.log||{};c.log[t]={s:'taken',at:now};save();after();toast('✓ '+c.name+' taken');return}
+  let at=new Date();at.setSeconds(0,0);
+  PK={kind:'take',id:id,t:t,at:at.getTime(),after:after};
+  drawTake();
+}
+function drawTake(){
+  const P=PK,c=S.courses.find(x=>x.id===P.id);if(!c){closePicker();return}
+  const ds=doses(c),k=ds.indexOf(P.t),keepNext=ds[k+1];
+  const copy=JSON.parse(JSON.stringify(c));shiftFrom(copy,P.t,P.at);
+  const nd=doses(copy),moveNext=nd[k+1],end=nd[nd.length-1];
+  const when=x=>dayWord(x)+' '+hm(new Date(x));
+  const bad=k>0&&P.at<=ds[k-1];
+  pkShell('<div class="pkh" style="border:0;padding-bottom:6px"><small>Mark as taken</small><div class="big" style="margin-top:14px;font-size:24px">'+esc(c.name)+'</div>'+
+    '<div class="muted small" style="margin-top:6px">Due '+esc(when(P.t))+' · taken at <button class="link" data-pk="attime" style="padding:0">'+esc(when(P.at))+' ✎</button></div></div>'+
+    '<div class="tko">'+
+    '<button class="tk" data-pk="keep"><b>Keep the schedule</b><small>Next dose stays at '+esc(keepNext?when(keepNext):'—')+'</small></button>'+
+    '<button class="tk" data-pk="shift"'+(bad?' disabled':'')+'><b>Move the next doses</b><small>'+(bad?'The time taken must be after the previous dose':'Next dose at '+esc(when(moveNext))+', '+esc(everyText(c.every,c.everyU))+'.<br>Course ends '+esc(dt(end)))+'</small></button></div>'+
+    '<div class="pkb"><span class="sp"></span><button data-pk="cancel">Cancel</button></div>');
+}
+function takeChoice(k){
+  const P=PK;
+  if(k==='attime'){
+    const back={id:P.id,t:P.t,after:P.after};
+    timePicker(hm(new Date(P.at)),v=>{
+      const p=v.split(':').map(Number),d=new Date();d.setHours(p[0],p[1],0,0);
+      if(d.getTime()>Date.now()+60000)d.setDate(d.getDate()-1);
+      setTimeout(()=>{PK={kind:'take',id:back.id,t:back.t,at:d.getTime(),after:back.after};drawTake()},150);
+    });
+    return;
+  }
+  const c=S.courses.find(x=>x.id===P.id);if(!c)return;
+  if(k==='keep'){c.log=c.log||{};c.log[P.t]={s:'taken',at:P.at}}
+  else if(k==='shift'){if(!shiftFrom(c,P.t,P.at))return;c.log[doses(c)[doses(c).indexOf(P.at)]]={s:'taken',at:P.at};c.log=Object.assign(c.log,{[P.at]:{s:'taken',at:P.at}})}
+  save();const after=P.after;history.back();
+  setTimeout(()=>{after();toast(k==='shift'?'✓ Taken · next doses moved':'✓ '+c.name+' taken')},0);
+}
+
 /* ================= doses popup (stays open, long-press to select many) ================= */
 let DP=null;
 function openDoses(id){
@@ -1398,6 +1458,7 @@ document.addEventListener('click',ev=>{
   if(b){
     const k=b.dataset.dp,t=+b.dataset.t;
     if(k==='close'){history.back();return}
+    if(k==='taken'){DP.open=null;takeDose(DP.id,t,()=>{if(DP)drawDoses()});return}
     if(k==='taken'||k==='skipped'||k==='unmark'){setMarks([t],k==='unmark'?'':k);DP.open=null;drawDoses();if(k==='taken')toast('✓ Marked taken');return}
     if(k==='cancelsel'){DP.sel=null;drawDoses();return}
     if(k==='allmissed'){const c=S.courses.find(x=>x.id===DP.id);doses(c).forEach(x=>{const s=status(c,x);if(s==='missed'||s==='due')DP.sel.add(x)});drawDoses();return}
@@ -1516,6 +1577,7 @@ $('#restorefile').addEventListener('change',ev=>{
 /* ================= events ================= */
 function mark(id,t,s){
   const c=S.courses.find(x=>x.id===id);if(!c)return;
+  if(s==='taken'){takeDose(id,t,()=>{closeModal();render()});return}
   c.log=c.log||{};
   if(s)c.log[t]={s:s,at:Date.now()};else delete c.log[t];
   save();closeModal();render();
@@ -1622,7 +1684,7 @@ setInterval(()=>{if(!document.hidden&&view==='home'&&!$('#modal').classList.cont
 buildTabs();
 /* ---- ripple on taps ---- */
 document.addEventListener('pointerdown',ev=>{
-  const b=ev.target.closest('.tab,.btn,.menu button,header button,.fab,.chead,.chip');if(!b||b.disabled)return;
+  const b=ev.target.closest('.tab,.btn,.menu button,header button,.fab,.chead,.chip,.tk');if(!b||b.disabled)return;
   const r=b.getBoundingClientRect(),sz=Math.max(r.width,r.height)*2.2,x=ev.clientX-r.left-sz/2,y=ev.clientY-r.top-sz/2;
   const e=document.createElement('span');e.className='rip';e.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+x+'px;top:'+y+'px';
   b.appendChild(e);setTimeout(()=>e.remove(),650);
