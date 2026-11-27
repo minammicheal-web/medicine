@@ -145,6 +145,8 @@ main .ms-l{background:var(--bg)}
 .namerow{display:flex;gap:8px;align-items:flex-end}.namerow label{flex:1}
 .namerow .btn{flex:none;padding:12px 14px;margin-bottom:1px}
 .unitrow{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;align-items:end}
+.stq{display:grid;gap:10px;align-items:end;margin-top:10px}.stq label{margin:0}
+.lowcard{border-left:4px solid var(--danger)}
 .unitrow .ms{margin-top:0}
 .lk{background:var(--bg);border-radius:12px;padding:12px;margin-top:12px;font-size:14px}
 .lk .src{font-size:12px;color:var(--muted);margin-top:8px}
@@ -970,7 +972,7 @@ function everyText(n,u){n=num(n);if(u==='hours'&&n===24)return 'once a day';if(u
 /* ================= data ================= */
 const KEY='medicine.v1';
 let mem=null;
-function defaults(){return {profiles:[{id:'me',name:'Me'}],active:'all',courses:[],lib:{},settings:{theme:'auto',remindOn:true,loud:false,doctor:true,autoClear:'off'}}}
+function defaults(){return {profiles:[{id:'me',name:'Me'}],active:'all',courses:[],lib:{},settings:{theme:'auto',remindOn:true,loud:false,doctor:true,autoClear:'off',stockWarn:'2'}}}
 function load(){
   const d=defaults();let raw=null;
   try{raw=localStorage.getItem(KEY)}catch(e){raw=mem}
@@ -1033,6 +1035,97 @@ function dosesBetween(a,b,all){
   const out=[];
   S.courses.forEach(c=>{if(!all&&!inFilter(c))return;doses(c).forEach(t=>{if(t>=a&&t<b)out.push({c:c,t:t})})});
   return out.sort((x,y)=>x.t-y.t||x.c.name.localeCompare(y.c.name));
+}
+
+/* ================= stock: packs like the Pharmacy app (Box › Strip › Tablet …) =================
+   c.stock = {on, pk, n:[counts], base, at, warn}. n[i] = how many of the next smaller unit are in unit i
+   (Box › Strip: n=[3,10] → 3 strips in a box, 10 tablets in a strip). base = smallest units (the dose unit,
+   ml for spoons) the person had at moment `at`. What is left is worked out from the doses since then. */
+const PACKS=[['bst',['Box','Strip']],['box',['Box']],['bottle',['Bottle']],['tube',['Tube']],['inhaler',['Inhaler']],['pen',['Pen']],['pack',['Pack']],['cbx',['Carton','Box']],['loose',[]]];
+const PK_PL={Box:'Boxes',Strip:'Strips',Bottle:'Bottles',Tube:'Tubes',Inhaler:'Inhalers',Pen:'Pens',Pack:'Packs',Carton:'Cartons'};
+const PK_DEF={tablet:['bst',[3,10]],pill:['bst',[3,10]],capsule:['bst',[2,10]],suppository:['bst',[2,5]],lozenge:['bst',[2,8]],sachet:['box',[10]],injection:['box',[3]],
+  patch:['box',[5]],ml:['bottle',[100]],tsp:['bottle',[100]],tbsp:['bottle',[100]],drop:['bottle',[200]],puff:['inhaler',[200]],spray:['bottle',[120]],unit:['pen',[300]],application:['tube',[30]],mg:['loose',[]]};
+const leafOf=u=>u==='tsp'?['ml',5]:u==='tbsp'?['ml',15]:[u,1];
+const leafWord=(u,n)=>{const w=UNIT_WORD[leafOf(u)[0]]||[u,u];return n===1?w[0]:w[1]};
+const pkWord=(u,n)=>n===1?u.toLowerCase():(PK_PL[u]||u+'s').toLowerCase();
+const pkDef=u=>PK_DEF[u]||['box',[10]];
+const cap=w=>w==='ml'?w:w.replace(/^./,x=>x.toUpperCase());
+const pkUnitsOf=pk=>(PACKS.find(p=>p[0]===pk)||PACKS[0])[1];
+function pkLabel(pk,unit){const us=pkUnitsOf(pk);return us.length?us.join(' › ')+' › '+cap(leafWord(unit,1)):'Loose ('+leafWord(unit,2)+' only)'}
+/* [[name, smallest units in it, plural]] biggest first, the dose unit last */
+function stLevels(pk,n,unit){
+  const us=pkUnitsOf(pk),out=[];
+  us.forEach((u,i)=>{let m=1;for(let j=i;j<us.length;j++)m*=num(n[j])>0?num(n[j]):1;out.push([u,m,PK_PL[u]||u+'s'])});
+  const w=UNIT_WORD[leafOf(unit)[0]]||[unit,unit];out.push([w[0],1,cap(w[1])]);
+  return out;
+}
+/* 75 tablets → "2 boxes + 1 strip + 5 tablets" */
+function stTxt(pk,n,unit,q){
+  q=Math.max(0,Math.round((+q||0)*1000)/1000);const L=stLevels(pk,n,unit),parts=[];let r=q;
+  L.forEach(([u,m],i)=>{const last=i===L.length-1,k=last?r:Math.floor(r/m+1e-9);if(k>0){parts.push(fnum(k)+' '+(last?leafWord(unit,k):pkWord(u,k)));r=Math.round((r-k*m)*1000)/1000}});
+  return parts.length?parts.join(' + '):'none';
+}
+function stSplit(pk,n,unit,q){q=Math.max(0,+q||0);const L=stLevels(pk,n,unit);return L.map(([u,m],i)=>{const last=i===L.length-1,k=last?Math.round(q*1000)/1000:Math.floor(q/m+1e-9);q=Math.round((q-k*m)*1000)/1000;return String(k)})}
+const stSum=(pk,n,unit,qs)=>stLevels(pk,n,unit).reduce((a,[u,m],i)=>a+(num(qs[i])>0?num(qs[i]):0)*m,0);
+const perDose=c=>num(c.amount)*leafOf(c.unit)[1];
+function stockInfo(c){
+  const st=c.stock;if(!st||!st.on)return null;
+  const ds=doses(c),now=Date.now(),per=perDose(c),log=c.log||{};
+  let used=0;
+  ds.forEach(t=>{const l=log[t];
+    if(l&&l.s==='taken'){if((l.at||t)>=st.at&&t>=st.at-12*HOUR)used++}
+    else if(!l&&t>=st.at&&t<=now)used++});
+  const left=Math.max(0,st.base-used*per);
+  const fut=ds.filter(t=>t>now&&!log[t]);
+  const covered=per>0?Math.floor(left/per+1e-9):fut.length;
+  const enough=covered>=fut.length,runOut=enough?null:fut[covered];
+  const need=Math.max(0,fut.length*per-left);
+  const warn=num(st.warn)>=0?num(st.warn):num(S.settings.stockWarn)||2;
+  const alertAt=runOut?runOut-warn*DAY:null;
+  return {left:left,per:per,doses:covered,fut:fut.length,enough:enough,runOut:runOut,lastOk:covered>0?fut[Math.min(covered,fut.length)-1]:null,need:need,warn:warn,alertAt:alertAt,low:!!runOut&&now>=alertAt,out:left<per&&fut.length>0};
+}
+/* how much to buy, rounded up to whole big units: "1 box (30 tablets)" */
+function buyTxt(c,need){
+  const st=c.stock,L=stLevels(st.pk,st.n,c.unit),big=L[0];
+  if(L.length===1)return fnum(Math.ceil(need*100)/100)+' '+leafWord(c.unit,need);
+  const k=Math.ceil(need/big[1]-1e-9);
+  return k+' '+pkWord(big[0],k)+' (you need '+fnum(Math.ceil(need*100)/100)+' '+leafWord(c.unit,need)+' more)';
+}
+const STOCK_WARN=[['1','1 day before'],['2','2 days before'],['3','3 days before'],['4','4 days before'],['5','5 days before'],['7','1 week before'],['10','10 days before'],['14','2 weeks before']];
+function stockLines(c){
+  const s=stockInfo(c);if(!s)return '';
+  const st=c.stock,when=x=>dayWord(x)+' '+hm(new Date(x));
+  return '<div class="line small"><span class="muted">In stock</span><b'+(s.low?' style="color:var(--danger-fg)"':'')+'>'+esc(stTxt(st.pk,st.n,c.unit,s.left))+'</b></div>'+
+    (s.fut?(s.enough?'<div class="line small"><span class="muted">Enough for</span><b style="color:var(--ok)">the whole course ✓</b></div>':
+    '<div class="line small"><span class="muted">Runs out</span><b'+(s.low?' style="color:var(--danger-fg)"':'')+'>'+(s.out?'now':'after '+esc(when(s.lastOk)))+'</b></div>'+
+    '<div class="line small"><span class="muted">Buy to finish the course</span><b>'+esc(buyTxt(c,s.need))+'</b></div>'):'');
+}
+function stockSheet(id){
+  const c=S.courses.find(x=>x.id===id);if(!c)return;
+  if(!c.stock||!c.stock.on){openEdit(id);if(draft){draft.stOn=true;render()}return}
+  const st=c.stock,s=stockInfo(c),L=stLevels(st.pk,st.n,c.unit);
+  openModal('<h3>🛒 '+esc(c.name)+'</h3><div class="muted small">'+esc(pkLabel(st.pk,c.unit))+' · you have <b>'+esc(stTxt(st.pk,st.n,c.unit,s.left))+'</b></div>'+
+    '<div class="chips" id="stmode" data-m="add" style="margin-top:12px"><button class="chip on" data-a="stmode" data-id="add">I bought more</button><button class="chip" data-a="stmode" data-id="set">Correct what I have</button></div>'+
+    '<div class="stq" style="grid-template-columns:repeat('+L.length+',1fr)">'+L.map((l,i)=>'<label>'+esc(l[2])+'<input type="number" inputmode="decimal" min="0" step="1" data-sq="'+i+'" value="'+(i===0&&L.length>1?'1':'0')+'"></label>').join('')+'</div>'+
+    '<div class="prev" id="stprev"></div>'+
+    '<div class="btns"><button class="btn ghost" data-a="close">Cancel</button><button class="btn" data-a="stsave" data-id="'+c.id+'">Save</button></div>');
+  stSheetPrev();
+}
+function stSheetPrev(){
+  const b=$('[data-a=stsave]'),p=$('#stprev');if(!b||!p)return;
+  const c=S.courses.find(x=>x.id===b.dataset.id);if(!c)return;
+  const st=c.stock,qs=[...document.querySelectorAll('[data-sq]')].map(x=>x.value),v=stSum(st.pk,st.n,c.unit,qs),m=$('#stmode').dataset.m,s=stockInfo(c);
+  const tot=m==='add'?s.left+v:v;
+  const copy=JSON.parse(JSON.stringify(c));copy.stock.base=tot;copy.stock.at=Date.now();
+  const s2=stockInfo(copy);
+  p.innerHTML='You will have <b>'+esc(stTxt(st.pk,st.n,c.unit,tot))+'</b>.<br>'+(s2.fut?(s2.enough?'That is enough for the whole course ✓':'Enough until '+esc(s2.lastOk?dayWord(s2.lastOk)+' '+hm(new Date(s2.lastOk)):'now')+'. Still need '+esc(buyTxt(copy,s2.need))+'.'):'');
+}
+function stSheetSave(id){
+  const c=S.courses.find(x=>x.id===id);if(!c)return;
+  const st=c.stock,qs=[...document.querySelectorAll('[data-sq]')].map(x=>x.value),v=stSum(st.pk,st.n,c.unit,qs),m=$('#stmode').dataset.m,s=stockInfo(c);
+  if(m==='add'&&!(v>0)){toast('Enter how much you bought');return}
+  st.base=m==='add'?s.left+v:v;st.at=Date.now();delete st.told;
+  save();closeModal();render();toast(m==='add'?'Stock added':'Stock updated');
 }
 
 /* ================= auto clear & taken from notifications ================= */
@@ -1108,9 +1201,12 @@ function openMs(box){
   const s=$('.sel',m);if(s)m.scrollTop=Math.max(0,s.offsetTop-m.clientHeight/2+24);
 }
 function applySelect(id,v){
+  if(id==='f-stPk'&&draft){draft.stPk=v;const d=PACKS.find(p=>p[0]===v)[1],def=pkDef(draft.unit);draft.stN=v===def[0]?def[1].map(String):d.map((u,i)=>String(i===0&&d.length>1?(v==='cbx'?12:3):10));draft.stQ=[];draft.stTouched=true;render();return}
+  if(id==='f-unit'&&draft&&!draft.stTouched&&!draft.stQ0){const def=pkDef(v);draft.stPk=def[0];draft.stN=def[1].map(String);draft.stQ=[]}
   if(id.indexOf('f-')===0&&draft){draft[id.slice(2)]=v;render();return}
   switch(id){
     case 'theme':S.settings.theme=v;applyTheme();save();render();break;
+    case 'stockWarn':S.settings.stockWarn=v;save();render();break;
     case 'autoClear':S.settings.autoClear=v;autoClear();save();render();if(v!=='off')toast('Finished courses will be erased automatically');break;
   }
 }
@@ -1150,6 +1246,10 @@ function vHome(){
   }else if(!due.length){
     h+='<section class="card center"><div class="muted">No more doses coming up.</div></section>';
   }
+  /* running low → buy more */
+  list.forEach(c=>{const s=stockInfo(c);if(!s||!s.low)return;
+    h+='<section class="card lowcard"><h3>🛒 '+esc(c.name)+(s.out?' has run out':' is running low')+who(c)+'</h3><div class="muted small">You have '+esc(stTxt(c.stock.pk,c.stock.n,c.unit,s.left))+(s.out?'':' — enough until '+esc(dayWord(s.lastOk)+' '+hm(new Date(s.lastOk))))+'.</div>'+
+      '<div class="warnbox">Buy '+esc(buyTxt(c,s.need))+' to finish the course.</div><div class="btns"><button class="btn" data-a="stock" data-id="'+c.id+'">+ I bought more</button></div></section>'});
   /* finished courses → doctor */
   list.forEach(c=>{const i=info(c);if(i.state==='finished')h+='<section class="card"><h3>✅ '+esc(c.name)+' course finished'+who(c)+'</h3><div class="muted small">Last dose was '+dt(i.last)+'. '+i.taken+' of '+i.total+' doses taken.</div><div class="warnbox">🩺 Remember to visit your doctor for a follow-up.</div><div class="btns"><button class="btn ghost" data-a="renew" data-id="'+c.id+'">Repeat course</button><button class="btn danger" data-a="clear" data-id="'+c.id+'">Clear record</button></div></section>'});
   /* today */
@@ -1179,8 +1279,10 @@ function courseCard(c){
     '<div class="line small"><span class="muted">First dose</span><b>'+dt(i.first)+'</b></div>'+
     '<div class="line small"><span class="muted">Last dose (course ends)</span><b>'+dt(i.last)+'</b></div>'+
     (i.next&&i.state!=='finished'?'<div class="line small"><span class="muted">Next dose</span><b>'+dayWord(i.next)+' '+hm(new Date(i.next))+'</b></div>':'')+
+    (i.state!=='finished'?stockLines(c):'')+
     (c.notes?'<div class="prev">'+esc(c.notes)+'</div>':'')+
     '<div class="seeall">See all doses ›</div></div>'+
+    (i.state!=='finished'?'<div class="btns"><button class="btn ghost" data-a="stock" data-id="'+c.id+'">+ '+(c.stock&&c.stock.on?'Add stock':'Track stock')+'</button></div>':'')+
     '<div class="btns"><button class="btn ghost" data-a="edit" data-id="'+c.id+'">Edit</button><button class="btn danger" data-a="clear" data-id="'+c.id+'">Clear</button></div></div></div></section>';
 }
 function vMeds(){
@@ -1229,6 +1331,8 @@ function vSettings(){
     '<label class="chkline"><input type="checkbox" data-flag="doctor"'+(s.doctor?' checked':'')+'> Remind me to visit the doctor when a course ends</label>'+
     '<div class="muted small" style="margin-top:6px">Each dose notification has <b>Taken</b> and <b>Snooze 10 min</b> buttons.</div>'+
     '<button class="btn ghost full" style="margin-top:14px" data-a="testnotif">Send a test notification</button></section>'+
+    '<section class="card"><h3>Stock</h3>'+msel('stockWarn','Warn new medicines before they run out',STOCK_WARN,String(s.stockWarn||2))+
+    '<div class="muted small" style="margin-top:8px">Each medicine can have its own warning time — open it and tap Edit. Packs and counts are the same as in the Pharmacy app (Box › Strip › Tablet …).</div></section>'+
     '<section class="card"><h3>Finished courses</h3>'+msel('autoClear','Erase finished courses automatically',[['off','No, I clear them myself'],['0','Right after the last dose'],['1','1 day after the last dose'],['7','1 week after the last dose'],['30','1 month after the last dose']],String(s.autoClear))+
     '<div class="muted small" style="margin-top:8px">Saved medicines and their doses are kept, so they still pop up when you type the name again.</div></section>'+
     '<section class="card"><h3>Saved medicines</h3>'+(lib.length?lib.map(k=>{const m=S.lib[k];return '<div class="line"><span><b>'+esc(m.name)+'</b><br><span class="muted small">'+esc(amountText(m.amount,m.unit)+' '+everyText(m.every,m.everyU)+' for '+tUnit(num(m.dur),m.durU))+'</span></span><button class="link" data-a="dellib" data-id="'+esc(k)+'">Remove</button></div>'}).join(''):'<div class="muted small">Medicines you add are remembered here.</div>')+'</section>'+
@@ -1243,18 +1347,53 @@ function vSettings(){
 function nextSlot(){const d=new Date();d.setSeconds(0,0);d.setMinutes(Math.ceil((d.getMinutes()+1)/5)*5);return d}
 function newDraft(o){
   const n=nextSlot();
-  return Object.assign({id:'',pid:S.active!=='all'?S.active:S.profiles[0].id,name:'',amount:'1',unit:'tablet',date:ymd(n),time:hm(n),every:'8',everyU:'hours',dur:'7',durU:'days',notes:''},o||{});
+  return Object.assign({id:'',pid:S.active!=='all'?S.active:S.profiles[0].id,name:'',amount:'1',unit:'tablet',date:ymd(n),time:hm(n),every:'8',everyU:'hours',dur:'7',durU:'days',notes:'',stOn:false,stPk:pkDef('tablet')[0],stN:pkDef('tablet')[1].map(String),stQ:[],stWarn:String(S.settings.stockWarn||2)},o||{});
 }
 function openAdd(){draft=newDraft();lk=null;go('edit')}
 function openEdit(id){
   const c=S.courses.find(x=>x.id===id);if(!c)return;
   const s=new Date(c.start);
   draft={id:c.id,pid:c.pid,name:c.name,amount:String(c.amount),unit:c.unit,date:ymd(s),time:hm(s),every:String(c.every),everyU:c.everyU,dur:String(c.dur),durU:c.durU,notes:c.notes||''};
+  Object.assign(draft,stDraftFrom(c));
   lk=null;go('edit');
+}
+function stDraftFrom(c){
+  const st=c.stock;
+  if(!st){const d=pkDef(c.unit);return {stOn:false,stPk:d[0],stN:d[1].map(String),stQ:[],stWarn:String(S.settings.stockWarn||2),stQ0:null}}
+  const s=stockInfo(Object.assign({},c,{stock:Object.assign({},st,{on:true})}));
+  const q=stSplit(st.pk,st.n,c.unit,s.left);
+  return {stOn:!!st.on,stPk:st.pk,stN:(st.n||[]).map(String),stQ:q,stWarn:String(st.warn!=null?st.warn:S.settings.stockWarn||2),stQ0:JSON.stringify([st.pk,(st.n||[]).map(String),q])};
+}
+/* the stock the form describes (base counted now) */
+function draftStock(){
+  const d=draft;if(!d.stOn)return null;
+  const n=pkUnitsOf(d.stPk).map((u,i)=>num(d.stN[i]));
+  return {on:true,pk:d.stPk,n:n,base:stSum(d.stPk,n,d.unit,d.stQ||[]),at:Date.now(),warn:num(d.stWarn)};
+}
+function stockFormHtml(){
+  const d=draft;
+  let h='<section class="card"><h4>Stock — how much medicine you have</h4>'+
+    '<label class="chkline"><input type="checkbox" data-df="stOn"'+(d.stOn?' checked':'')+'> Count my boxes and warn me before it runs out</label>';
+  if(!d.stOn)return h+'<div class="muted small">Turn on to enter how many boxes, strips and '+esc(leafWord(d.unit,2))+' you bought.</div></section>';
+  const us=pkUnitsOf(d.stPk),L=stLevels(d.stPk,d.stN,d.unit);
+  h+=msel('f-stPk','Pack',PACKS.map(p=>[p[0],pkLabel(p[0],d.unit)]),d.stPk);
+  if(us.length)h+='<div class="stq" style="grid-template-columns:repeat('+us.length+',1fr)">'+us.map((u,i)=>'<label>'+esc((i<us.length-1?PK_PL[us[i+1]]:L[L.length-1][2])+' in a '+u.toLowerCase())+'<input type="number" inputmode="decimal" min="0" step="1" data-sn="'+i+'" value="'+esc(d.stN[i]||'')+'"></label>').join('')+'</div>';
+  h+='<h4 style="margin-top:18px">'+(d.id&&d.stQ0?'You have now':'You bought')+'</h4><div class="stq" style="grid-template-columns:repeat('+L.length+',1fr)">'+L.map((l,i)=>'<label>'+esc(l[2])+'<input type="number" inputmode="decimal" min="0" step="1" data-sq2="'+i+'" value="'+esc(d.stQ[i]||'')+'" placeholder="0"></label>').join('')+'</div>';
+  h+='<div style="margin-top:12px">'+msel('f-stWarn','Warn me before it runs out',STOCK_WARN,d.stWarn)+'</div>';
+  h+='<div class="prev" id="stockprev">'+stockPrevHtml()+'</div></section>';
+  return h;
+}
+function stockPrevHtml(){
+  const c=draftCourse();if(!c.stock)return '';
+  if(draftProblem(c))return '<div class="muted">Fill in the dose and schedule above to see how long it lasts.</div>';
+  const st=c.stock,i=info(c),s=stockInfo(c),tot=i.total*perDose(c),u=leafWord(c.unit,2);
+  if(!(st.base>0))return 'The whole course needs <b>'+esc(fnum(Math.round(tot*100)/100))+' '+esc(u)+'</b> = <b>'+esc(stTxt(st.pk,st.n,c.unit,tot))+'</b>.';
+  return 'That is <b>'+esc(fnum(st.base))+' '+esc(leafWord(c.unit,st.base))+'</b>, enough for <b>'+s.doses+' dose'+(s.doses===1?'':'s')+'</b>. '+
+    (s.fut?(s.enough?'<span style="color:var(--ok)">Enough for the whole course ✓</span>':'<br>Runs out after <b>'+esc(s.lastOk?dLong(s.lastOk)+' '+hm(new Date(s.lastOk)):'now')+'</b>.<div class="warnbox">To finish the course buy '+esc(buyTxt(c,s.need))+'. I will remind you '+esc(STOCK_WARN.find(x=>x[0]===String(s.warn))?STOCK_WARN.find(x=>x[0]===String(s.warn))[1].toLowerCase():s.warn+' days before')+' it runs out.</div>'):'');
 }
 function draftCourse(){
   const d=draft;
-  return {id:d.id||'x',pid:d.pid,name:d.name.trim(),amount:num(d.amount),unit:d.unit,start:d.date+'T'+d.time,every:num(d.every),everyU:d.everyU,dur:num(d.dur),durU:d.durU,notes:d.notes.trim(),log:{}};
+  return {id:d.id||'x',pid:d.pid,name:d.name.trim(),amount:num(d.amount),unit:d.unit,start:d.date+'T'+d.time,every:num(d.every),everyU:d.everyU,dur:num(d.dur),durU:d.durU,notes:d.notes.trim(),log:{},stock:draftStock()};
 }
 function draftProblem(c){
   if(!c.name)return 'Enter the medicine name';
@@ -1262,6 +1401,7 @@ function draftProblem(c){
   if(!/^\d{4}-\d\d-\d\d$/.test(draft.date)||!/^\d\d:\d\d$/.test(draft.time))return 'Choose the date and time of the first dose';
   if(!(c.every>0))return 'Enter how often it repeats';
   if(!(c.dur>0))return 'Enter how long you take it';
+  if(c.stock&&c.stock.n.some(x=>!(x>0)))return 'Enter how many are in each pack';
   return '';
 }
 function previewHtml(){
@@ -1299,6 +1439,7 @@ function vEdit(){
     '<h4 style="margin-top:18px">For how long</h4><div class="unitrow"><label style="margin:0">Duration<input type="number" inputmode="decimal" step="1" min="0" data-f="dur" value="'+esc(d.dur)+'"></label>'+msel('f-durU','Time unit',DUR_UNITS,d.durU)+'</div>'+
     '<div class="prev" id="preview">'+previewHtml()+'</div>'+
     '<label>Notes (optional)<input data-f="notes" value="'+esc(d.notes)+'" placeholder="e.g. after meals"></label></section>';
+  h+=stockFormHtml();
   h+='<button class="btn big" data-a="savecourse">'+(d.id?'Save changes':'Save &amp; set reminders')+'</button>';
   if(d.id)h+='<div class="center" style="margin-top:8px"><button class="link" style="color:var(--danger-fg)" data-a="clear" data-id="'+d.id+'">Delete this medicine</button></div>';
   return h;
@@ -1309,12 +1450,18 @@ function saveCourse(){
   const old=draft.id&&S.courses.find(x=>x.id===draft.id);
   if(old){
     if(old.start!==c.start||old.every!==c.every||old.everyU!==c.everyU||old.dur!==c.dur||old.durU!==c.durU)delete old.anchors;
+    const amtCh=old.amount!==c.amount||old.unit!==c.unit;
     Object.assign(old,{pid:c.pid,name:c.name,amount:c.amount,unit:c.unit,start:c.start,every:c.every,everyU:c.everyU,dur:c.dur,durU:c.durU,notes:c.notes});
     const keep={},ds=doses(old);Object.keys(old.log||{}).forEach(k=>{if(ds.indexOf(+k)>=0)keep[k]=old.log[k]});old.log=keep;
+    /* stock: keep the count running unless the amounts or the pack were changed in the form */
+    const ns=c.stock,same=draft.stQ0&&draft.stQ0===JSON.stringify([draft.stPk,draft.stN.map(String),(draft.stQ||[]).map(String)]);
+    if(!ns){if(old.stock)old.stock.on=false}
+    else if(same&&old.stock&&!amtCh)Object.assign(old.stock,{on:true,warn:ns.warn});
+    else{old.stock=ns}
   }else{
     c.id=uid();c.created=Date.now();S.courses.push(c);
   }
-  S.lib[c.name.toLowerCase()]={name:c.name,amount:c.amount,unit:c.unit,every:c.every,everyU:c.everyU,dur:c.dur,durU:c.durU,notes:c.notes};
+  S.lib[c.name.toLowerCase()]={name:c.name,amount:c.amount,unit:c.unit,every:c.every,everyU:c.everyU,dur:c.dur,durU:c.durU,notes:c.notes,pk:draft.stPk,pkn:draft.stN.map(String)};
   save();
   const n=info(old||c).ds.filter(t=>t>Date.now()).length;
   draft=null;lk=null;view='meds';render();window.scrollTo(0,0);
@@ -1592,7 +1739,8 @@ function shiftFrom(c,t,at){
 function takeDose(id,t,after){
   const c=S.courses.find(x=>x.id===id);if(!c)return;
   const ds=doses(c),k=ds.indexOf(t),now=Date.now();
-  if(k<0||now-t<10*60000||k>=ds.length-1){c.log=c.log||{};c.log[t]={s:'taken',at:now};save();after();toast('✓ '+c.name+' taken');return}
+  /* taken more than 10 minutes late OR early: offer to keep the schedule or move the next doses */
+  if(k<0||Math.abs(now-t)<10*60000||k>=ds.length-1){c.log=c.log||{};c.log[t]={s:'taken',at:now};save();after();toast('✓ '+c.name+' taken');return}
   let at=new Date();at.setSeconds(0,0);
   PK={kind:'take',id:id,t:t,at:at.getTime(),after:after};
   drawTake();
@@ -1604,8 +1752,9 @@ function drawTake(){
   const nd=doses(copy),moveNext=nd[k+1],end=nd[nd.length-1];
   const when=x=>dayWord(x)+' '+hm(new Date(x));
   const bad=k>0&&P.at<=ds[k-1];
+  const off=P.at-P.t,offTxt=Math.abs(off)<60000?'on time':rel(off)+(off<0?' early':' late');
   pkShell('<div class="pkh" style="border:0;padding-bottom:6px"><small>Mark as taken</small><div class="big" style="margin-top:14px;font-size:24px">'+esc(c.name)+'</div>'+
-    '<div class="muted small" style="margin-top:6px">Due '+esc(when(P.t))+' · taken at <button class="link" data-pk="attime" style="padding:0">'+esc(when(P.at))+' ✎</button></div></div>'+
+    '<div class="muted small" style="margin-top:6px">Due '+esc(when(P.t))+' · taken at <button class="link" data-pk="attime" style="padding:0">'+esc(when(P.at))+' ✎</button><br><b>'+esc(offTxt)+'</b></div></div>'+
     '<div class="tko">'+
     '<button class="tk" data-pk="keep"><b>Keep the schedule</b><small>Next dose stays at '+esc(keepNext?when(keepNext):'—')+'</small></button>'+
     '<button class="tk" data-pk="shift"'+(bad?' disabled':'')+'><b>Move the next doses</b><small>'+(bad?'The time taken must be after the previous dose':'Next dose at '+esc(when(moveNext))+', '+esc(everyText(c.every,c.everyU))+'.<br>Course ends '+esc(dt(end)))+'</small></button></div>'+
@@ -1745,6 +1894,22 @@ function planItems(){
       if(t<=now||t>horizon||(c.log&&c.log[t]))return;
       out.push({t:t,id:'d-'+c.id+'-'+t,k:s.loud?'alarm':'remind',title:'💊 Time for '+c.name+(nm?' · '+nm:''),text:'Take '+amountText(c.amount,c.unit)+(c.notes?' — '+c.notes:'')+'.',cid:c.id,dt:t});
     });
+    const sk=i.state!=='finished'?stockInfo(c):null;
+    if(sk&&sk.runOut){
+      const body=(sk.out?'It has run out':'Enough until '+dayWord(sk.lastOk)+' '+hm(new Date(sk.lastOk)))+'. Buy '+buyTxt(c,sk.need)+' to finish the course.';
+      const tt='🛒 '+c.name+(sk.out?' has run out':' is running low')+(nm?' · '+nm:'');
+      let a=sk.alertAt;const d=new Date(a);if(d.getHours()<9){d.setDate(d.getDate()-1);d.setHours(20,0,0,0);a=d.getTime()}else if(d.getHours()>=22){d.setHours(21,0,0,0);a=d.getTime()}
+      if(a>now)out.push({t:a,id:'stock-'+c.id,k:'remind',title:tt,text:body});
+      else{
+        /* already in the warning window: one notice a minute from now, once a day (kept in the plan until it fires) */
+        const tl=c.stock.told;
+        if(!tl||tl.d!==ymd(new Date())){c.stock.told={d:ymd(new Date()),t:now+60000};stockToldDirty=true}
+        if(c.stock.told.t>now)out.push({t:c.stock.told.t,id:'stock-'+c.id,k:'remind',title:tt,text:body});
+      }
+      /* then every day at 10:00 until it runs out or more is added */
+      const r=new Date(Math.max(a,now));r.setHours(10,0,0,0);
+      for(let k=1;k<=15;k++){r.setDate(r.getDate()+1);const x=r.getTime();if(x>sk.runOut)break;out.push({t:x,id:'stock-'+c.id+'-'+k,k:'remind',title:tt,text:body})}
+    }
     if(s.doctor){
       let t=i.last+HOUR;const d=new Date(t);
       if(d.getHours()>=22||d.getHours()<9){if(d.getHours()>=22)d.setDate(d.getDate()+1);d.setHours(10,0,0,0);t=d.getTime()}
@@ -1754,7 +1919,7 @@ function planItems(){
   out.sort((a,b)=>a.t-b.t);
   return out.slice(0,400);
 }
-let syncT=null,askedNotif=false;
+let syncT=null,askedNotif=false,stockToldDirty=false;
 function syncNative(){
   if(!hasNative())return;
   clearTimeout(syncT);
@@ -1762,6 +1927,7 @@ function syncNative(){
     try{
       const items=planItems();
       window.Android.setPlan(JSON.stringify(items));
+      if(stockToldDirty){stockToldDirty=false;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
       if(items.length&&!askedNotif&&typeof window.Android.notifStatus==='function'&&window.Android.notifStatus()!=='granted'){
         askedNotif=true;window.Android.askNotifications();
       }
@@ -1850,12 +2016,15 @@ document.addEventListener('click',async ev=>{
     case 'dose':doseSheet(id,+t.dataset.t);break;
     case 'mark':mark(id,+t.dataset.t,t.dataset.s);break;
     case 'clear':clearCourse(id);break;
-    case 'renew':{const c=S.courses.find(x=>x.id===id);if(!c)break;const n=nextSlot();draft=newDraft({pid:c.pid,name:c.name,amount:String(c.amount),unit:c.unit,every:String(c.every),everyU:c.everyU,dur:String(c.dur),durU:c.durU,notes:c.notes||'',date:ymd(n),time:hm(n)});lk=null;go('edit');break}
+    case 'renew':{const c=S.courses.find(x=>x.id===id);if(!c)break;const n=nextSlot();draft=newDraft({pid:c.pid,name:c.name,amount:String(c.amount),unit:c.unit,every:String(c.every),everyU:c.everyU,dur:String(c.dur),durU:c.durU,notes:c.notes||'',date:ymd(n),time:hm(n)});Object.assign(draft,stDraftFrom(c),{stQ0:null});lk=null;go('edit');break}
     case 'clearfinished':{
       const f=S.courses.filter(c=>inFilter(c)&&info(c).state==='finished');
       if(!await ask('Clear '+f.length+' finished course'+(f.length===1?'':'s')+'?','Clear'))break;
       closeModal();S.courses=S.courses.filter(c=>f.indexOf(c)<0);save();render();toast('Cleared');break}
     case 'savecourse':saveCourse();break;
+    case 'stock':stockSheet(id);break;
+    case 'stmode':{const m=$('#stmode');m.dataset.m=id;m.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b===t));const s=document.querySelectorAll('[data-sq]');if(id==='set'){const c=S.courses.find(x=>x.id===$('[data-a=stsave]').dataset.id);const q=stSplit(c.stock.pk,c.stock.n,c.unit,stockInfo(c).left);s.forEach((x,i)=>x.value=q[i])}else s.forEach((x,i)=>x.value=i===0&&s.length>1?'1':'0');stSheetPrev();break}
+    case 'stsave':stSheetSave(id);break;
     case 'lookup':lookup();break;
     case 'lkclose':if(lk){lk.hidden=true;updLookup()}break;
     case 'pickdate':if(draft)datePicker(draft.date,v=>{draft.date=v;render()});break;
@@ -1867,6 +2036,7 @@ document.addEventListener('click',async ev=>{
     case 'uselib':{
       const m=S.lib[id];if(!m||!draft)break;
       Object.assign(draft,{name:m.name,amount:String(m.amount),unit:m.unit,every:String(m.every),everyU:m.everyU,dur:String(m.dur),durU:m.durU,notes:m.notes||draft.notes,fromLib:true});
+      if(m.pk){draft.stPk=m.pk;draft.stN=(m.pkn||[]).map(String);draft.stQ=[];draft.stTouched=true}else if(!draft.stTouched){const df=pkDef(m.unit);draft.stPk=df[0];draft.stN=df[1].map(String)}
       lk=null;render();toast('Filled in from your saved '+m.name+' — edit if needed');break}
     case 'person':personSheet(id);break;
     case 'picon':{$('#sheet').dataset.icon=id;document.querySelectorAll('[data-a=picon]').forEach(b=>b.classList.toggle('on',b===t));break}
@@ -1891,16 +2061,23 @@ document.addEventListener('click',async ev=>{
 });
 document.addEventListener('input',ev=>{
   const t=ev.target;
+  if(t.dataset.sq!=null){stSheetPrev();return}
+  if((t.dataset.sn!=null||t.dataset.sq2!=null)&&draft){
+    if(t.dataset.sn!=null){draft.stN[+t.dataset.sn]=t.value;draft.stTouched=true}else draft.stQ[+t.dataset.sq2]=t.value;
+    const sp=$('#stockprev');if(sp)sp.innerHTML=stockPrevHtml();return;
+  }
   if(t.dataset.f&&draft){
     draft[t.dataset.f]=t.value;
     if(t.dataset.f==='name'){draft.fromLib=false;if(lk){lk=null;updLookup()}const s=$('#sugs');if(s)s.innerHTML=sugsHtml()}
     const p=$('#preview');if(p)p.innerHTML=previewHtml();
+    const sp=$('#stockprev');if(sp)sp.innerHTML=stockPrevHtml();
   }
 });
 document.addEventListener('focusin',ev=>{if(ev.target.id==='f-name'){const s=$('#sugs');if(s)s.innerHTML=sugsHtml()}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){closeMs();if($('#pk'))history.back()}if(ev.key==='Enter'&&ev.target.id==='f-name'){ev.preventDefault();ev.target.blur();lookup()}});
 document.addEventListener('change',ev=>{
   const t=ev.target;
+  if(t.dataset.df&&draft){draft[t.dataset.df]=t.checked;render();return}
   if(t.dataset.flag){S.settings[t.dataset.flag]=t.checked;save();if(t.dataset.flag==='remindOn'&&t.checked)syncNative()}
 });
 window.addEventListener('popstate',()=>{closeMs();if($('#pk')){closePicker();return}if($('#dp')){closeDoses();return}if($('#modal').classList.contains('show')){closeModal();return}if(view==='edit'||view==='settings'){goBack()}else if(view!=='home'){view='home';render()}});
